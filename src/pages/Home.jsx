@@ -1,14 +1,14 @@
 // source: https://github.com/tailwindtoolbox/Profile-Card
 import React from "react";
-import { FaFileDownload } from "react-icons/fa";
+import { FaFileDownload, FaBriefcase } from "react-icons/fa";
 
 const Home = () => {
 	return (
-        <div className="dark:bg-green-900">
+        <div className="bg-gradient-to-r from-white via-green-200 to-green-400 dark:bg-gradient-to-r dark:from-green-300 dark:via-green-600 dark:to-green-900 dark:bg-gradient-to-r dark:from-green-300 dark:via-green-600 dark:to-green-900">
 
         
-        <div className="max-w-4xl flex items-center h-auto lg:h-screen flex-wrap mx-auto my-32 lg:my-0">
-    	<div id="profile" className="w-full lg:w-3/5 rounded-lg lg:rounded-l-lg lg:rounded-r-none shadow-2xl bg-white dark:bg-gray-900 opacity-75 mx-6 lg:mx-0">
+        <div className="max-w-4xl flex items-center h-screen  flex-wrap mx-auto lg:my-0">
+    	<div id="profile" className="transform transition duration-500 hover:scale-125 w-full lg:w-3/5 rounded-lg lg:rounded-l-lg lg:rounded-r-none shadow-2xl bg-white dark:bg-gray-900 opacity-75 mx-6 lg:mx-0">
 	
 
 		<div className="p-4 md:p-12 text-center lg:text-left">
@@ -16,15 +16,15 @@ const Home = () => {
 			
 			<h1 className="dark:text-white text-3xl font-bold pt-8 lg:pt-0">Raden Mohamad Adrian</h1>
 			<div className="mx-auto lg:mx-0 w-4/5 pt-3 border-b-2 border-green-500 opacity-25"></div>
-			<p className="dark:text-white pt-4 text-base font-bold flex items-center justify-center lg:justify-start"><svg className="h-4 fill-current text-green-700 pr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9 12H1v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-8v2H9v-2zm0-1H0V5c0-1.1.9-2 2-2h4V2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1h4a2 2 0 0 1 2 2v6h-9V9H9v2zm3-8V2H8v1h4z"/></svg> AI Engineer, Data Scientist, Full-Stack Developer</p>
+			<p className="dark:text-white pt-4 text-base font-bold flex my-auto justify-center lg:justify-start"><FaBriefcase className="my-auto h-5 text-green-700 mr-3" />AI Engineer, Data Scientist, Full-Stack Developer</p>
 			<p className="dark:text-white pt-8 text-sm">I am a 7th-semester Computer Science student at the University of Indonesia. I have a deep passion for Artificial Intelligence
 and Data Science. I also have strong skills in front-end and back-end development, mobile development, and have dabbled in
 cybersecurity.</p>
 
 			<div className="pt-12 pb-8">
 				<a href="files/MyCV.pdf" download>
-					<button className=" m-auto lg:m-0 bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-4 rounded-full flex">
-					Download CV <FaFileDownload className="ml-2 m-auto"/>
+					<button className="items-center m-auto lg:m-0 bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-4 rounded-full flex">
+					Download CV <FaFileDownload className="ml-2"/>
 					</button> 
 				</a>
 				
@@ -41,7 +41,7 @@ cybersecurity.</p>
 	</div>
 	
 	<div className="w-full lg:w-2/5">
-		<img src={import.meta.env.BASE_URL+"images/profile.jpg"} className="rounded-none lg:rounded-lg shadow-2xl hidden lg:block"/>
+		<img src={import.meta.env.BASE_URL+"images/profile.jpg"} className="transform transition duration-500 hover:scale-125 rounded-none lg:rounded-lg shadow-2xl hidden lg:block"/>
 	</div>
 	
 

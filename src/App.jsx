@@ -11,6 +11,7 @@ function App() {
   return (
     <>
       <ThemeProvider>
+        <div className='font-grotesk'>
         <Router basename={import.meta.env.BASE_URL}>
             <Navbar />
           <Routes>
@@ -21,6 +22,8 @@ function App() {
           </Routes>
 
         </Router>
+        </div>
+
       </ThemeProvider>
     </>
   );

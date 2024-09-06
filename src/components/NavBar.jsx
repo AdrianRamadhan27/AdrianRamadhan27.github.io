@@ -28,31 +28,37 @@ const Navbar = () => {
       </Link>
 
       {/* Desktop Navigation */}
-      <ul className='hidden md:flex'>
-        {navItems.map(item => (
-            <Link to={item.path}>
-            <li
-                key={item.id}
-                className='p-4 hover:bg-black dark:hover:bg-[#00df9a] rounded-xl m-2 cursor-pointer duration-300 hover:text-white dark:hover:text-black'
-            >
-                {item.text}
-            </li>
-            </Link>
-          
-        ))}
-      </ul>
+      <div className="flex items-center">
+        <ul className='hidden md:flex'>
+          {navItems.map(item => (
+              <Link to={item.path}>
+              <li
+                  key={item.id}
+                  className='p-4 hover:bg-black dark:hover:bg-[#00df9a] rounded-xl m-2 cursor-pointer duration-300 hover:text-white dark:hover:text-black'
+              >
+                  {item.text}
+              </li>
+              </Link>
+            
+          ))}
 
-      <button
-        onClick={toggleTheme}
-        className="mt-2 p-2 bg-green-400 hover:bg-green-700 dark:bg-gray-900 dark:hover:bg-green-950 text-black dark:text-white rounded"
-      >
-        {theme === "light" ? "☀️" : "🌙"}
-      </button>
-
-      {/* Mobile Navigation Icon */}
-      <div onClick={handleNav} className='block md:hidden'>
-        {nav ? <AiOutlineClose size={20} /> : <AiOutlineMenu size={20} />}
+        </ul>
+        <button
+          onClick={toggleTheme}
+          className="h-fit p-2 bg-green-400 hover:bg-green-700 dark:bg-gray-900 dark:hover:bg-green-950 text-black dark:text-white rounded"
+        >
+          {theme === "light" ? "☀️" : "🌙"}
+        </button>
+        {/* Mobile Navigation Icon */}
+        <div onClick={handleNav} className='block md:hidden ml-3'>
+          {nav ? <AiOutlineClose size={20} /> : <AiOutlineMenu size={20} />}
+        </div>
       </div>
+
+
+
+
+
 
       {/* Mobile Navigation Menu */}
       <ul
