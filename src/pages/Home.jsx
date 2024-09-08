@@ -4,10 +4,10 @@ import { FaFileDownload, FaBriefcase } from "react-icons/fa";
 
 const Home = () => {
 	return (
-        <div className="bg-gradient-to-r from-white via-green-200 to-green-400 dark:bg-gradient-to-r dark:from-green-300 dark:via-green-600 dark:to-green-900 ">
+        <div className="h-screen overflow-y-auto bg-gradient-to-r from-white via-green-200 to-green-400 dark:bg-gradient-to-r dark:from-green-300 dark:via-green-600 dark:to-green-900 ">
 
         
-        <div className="max-w-4xl flex items-center h-screen  flex-wrap mx-auto lg:my-0">
+        <div className="max-w-4xl flex items-center h-full  flex-wrap mx-auto lg:my-0">
     	<div id="profile" className="mt-5 lg:mt-0 transform transition duration-500 lg:hover:scale-125 hover:scale-105 w-full lg:w-3/5 rounded-lg  shadow-2xl bg-white dark:bg-black opacity-75 mx-6 lg:mx-0">
 	
 

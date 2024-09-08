@@ -23,10 +23,10 @@ const Navbar = () => {
   ];
 
   return (
-    <div className='bg-green-600 dark:bg-black flex justify-between items-center h-24 mx-auto px-4 text-black dark:text-white '>
+    <div className='sticky top-0 z-50 bg-green-600 dark:bg-black flex justify-between items-center h-24 mx-auto px-4 text-black dark:text-white '>
       {/* Logo */}
       <Link to="/">
-      <h1 className='w-full text-3xl font-bold text-white dark:text-[#00df9a] flex gap-3'><GiSkullCrossedBones />Raden Mohamad Adrian</h1>
+      <h1 className='w-full text-3xl font-bold text-white dark:text-[#00df9a] flex gap-3 group items-center'><GiSkullCrossedBones className="group-hover:block hidden"/>Raden Mohamad Adrian</h1>
       </Link>
 
       {/* Desktop Navigation */}
@@ -36,8 +36,8 @@ const Navbar = () => {
               <Link to={item.path}>
               <li
                   key={item.id}
-                  className={`p-4 hover:bg-black dark:hover:bg-[#00df9a] rounded-xl m-2 cursor-pointer duration-300 hover:text-white dark:hover:text-black 
-                    ${location.pathname === item.path && 'bg-black dark:bg-[#00df9a] text-white dark:text-black'}
+                  className={`p-4 rounded-xl m-2 cursor-pointer duration-300 hover:text-white dark:hover:text-[#00df9a] 
+                    ${location.pathname === item.path && 'underline text-white dark:text-[#00df9a]'}
                   `}
               >
                   {item.text}
@@ -55,7 +55,7 @@ const Navbar = () => {
         </button>
         {/* Mobile Navigation Icon */}
         <div onClick={handleNav} className='block md:hidden ml-3'>
-          {nav ? <AiOutlineClose size={20} /> : <AiOutlineMenu size={20} />}
+          {nav ? <AiOutlineClose size={20} className="cursor-pointer"/> : <AiOutlineMenu size={20} className="cursor-pointer"/>}
         </div>
       </div>
 
@@ -74,7 +74,7 @@ const Navbar = () => {
       >
         {/* Mobile Logo */}
         <Link to="/">
-        <h1 className='w-full text-3xl font-bold dark:text-[#00df9a] text-white m-4 flex gap-3'><GiSkullCrossedBones />Raden Mohamad Adrian</h1>
+        <h1 className='w-full text-3xl font-bold dark:text-[#00df9a] text-white m-4 flex gap-3 group'><GiSkullCrossedBones className="group-hover:block hidden"/>Raden Mohamad Adrian</h1>
         </Link>
         {/* Mobile Navigation Items */}
         {navItems.map(item => (
