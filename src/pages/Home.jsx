@@ -3,6 +3,7 @@ import {useState} from "react";
 import { FaDownload, FaBriefcase } from "react-icons/fa";
 import { TbFileCv } from "react-icons/tb";
 import { IoClose } from "react-icons/io5";
+import { TypeAnimation } from 'react-type-animation';
 
 import ReactDOM from 'react-dom';
 
@@ -72,7 +73,24 @@ const Home = () => {
 			
 			<h1 className="dark:text-white text-3xl font-bold pt-8 lg:pt-0">Raden Mohamad Adrian</h1>
 			<div className="mx-auto lg:mx-0 w-4/5 pt-3 border-b-2 border-green-500 opacity-25"></div>
-			<p className="dark:text-white pt-4 text-base font-bold flex my-auto justify-center lg:justify-start"><FaBriefcase className="my-auto h-5 text-green-700 mr-3" />AI Engineer, Data Scientist, Full-Stack Developer</p>
+			<p className="dark:text-white pt-4 text-base font-bold flex my-auto justify-center lg:justify-start">
+				<FaBriefcase className="my-auto h-5 text-green-700 mr-3" />
+				<TypeAnimation 
+					sequence={[
+						'AI Engineer',
+						1000, 
+						'AI Engineer, Data Scientist',
+						1000, 
+						'AI Engineer, Data Scientist, Full-Stack Developer',
+						5000
+					]}
+					wrapper="span"
+					cursor={true}
+					repeat={Infinity}
+
+				
+				/>
+			</p>
 			<p className="dark:text-white pt-8 text-sm">I am a 7th-semester Computer Science student at the University of Indonesia. I have a deep passion for Artificial Intelligence
 and Data Science. I also have strong skills in front-end and back-end development, mobile development, and have dabbled in
 cybersecurity.</p>
