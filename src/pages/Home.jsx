@@ -1,7 +1,6 @@
 // source: https://github.com/tailwindtoolbox/Profile-Card
 import React from "react";
 import { FaFileDownload, FaBriefcase } from "react-icons/fa";
-import { GiSkullCrossedBones } from "react-icons/gi";
 
 const Home = () => {
 	return (
