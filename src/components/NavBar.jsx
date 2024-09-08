@@ -23,7 +23,7 @@ const Navbar = () => {
   ];
 
   return (
-    <div className='sticky top-0 z-50 bg-green-600 dark:bg-black flex justify-between items-center h-24 mx-auto px-4 text-black dark:text-white '>
+    <div className='sticky top-0 z-40 bg-green-600 dark:bg-black flex justify-between items-center h-24 mx-auto px-4 text-black dark:text-white '>
       {/* Logo */}
       <Link to="/">
       <h1 className='w-full text-3xl font-bold text-white dark:text-[#00df9a] flex gap-3 group items-center'><GiSkullCrossedBones className="group-hover:block hidden"/>Raden Mohamad Adrian</h1>
@@ -33,9 +33,9 @@ const Navbar = () => {
       <div className="flex items-center">
         <ul className='hidden md:flex'>
           {navItems.map(item => (
-              <Link to={item.path}>
+              <Link to={item.path} key={item.id}>
               <li
-                  key={item.id}
+                  
                   className={`p-4 rounded-xl m-2 cursor-pointer duration-300 hover:text-white dark:hover:text-[#00df9a] 
                     ${location.pathname === item.path && 'underline text-white dark:text-[#00df9a]'}
                   `}
@@ -78,9 +78,9 @@ const Navbar = () => {
         </Link>
         {/* Mobile Navigation Items */}
         {navItems.map(item => (
-          <Link to={item.path}>
+          <Link to={item.path} key={item.id}>
           <li
-            key={item.id}
+            
             className={`p-4 border-b rounded-xl hover:bg-black dark:hover:bg-[#00df9a] duration-300 hover:text-white dark:hover:text-black cursor-pointer border-gray-600
               ${location.pathname === item.path && 'bg-black dark:bg-[#00df9a] text-white dark:text-black'}
             `}
