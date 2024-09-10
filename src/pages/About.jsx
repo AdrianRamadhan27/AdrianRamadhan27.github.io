@@ -1,9 +1,8 @@
 import React from "react";
-import UnderMaintanance from "../components/UnderMaintenance";
 
 const About = () => {
 	return (
-        <UnderMaintanance />
+        <div />
 	);
 };
 

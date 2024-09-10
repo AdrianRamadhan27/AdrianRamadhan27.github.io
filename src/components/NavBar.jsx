@@ -27,7 +27,7 @@ const Navbar = () => {
     <div className='sticky top-0 z-40 bg-green-500 dark:bg-black flex justify-between  items-center h-24 mx-auto px-4 text-black dark:text-white '>
       {/* Logo */}
       <Link to="/" className="z-20"> 
-        <h1 className='w-full md:text-xl font-bold text-white dark:text-primary flex gap-3 items-center hover:scale-105 duration-200'><GiSkullCrossedBones/> AdrianRamadhan27</h1>
+        <h1 className='w-full md:text-xl font-bold text-white dark:text-primary flex gap-3 items-center hover:scale-105 duration-500 group'><GiSkullCrossedBones className="group-hover:animate-spin"/>AdrianRamadhan27</h1>
       </Link>
 
       {/* Desktop Navigation */}

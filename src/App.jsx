@@ -6,6 +6,7 @@ import Projects from './pages/Projects';
 import About from './pages/About';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/NavBar';
+import UnderMaintanance from './components/UnderMaintenance';
 
 function App() {
   return (
@@ -16,9 +17,9 @@ function App() {
             <Navbar />
           <Routes>
             <Route path="/" element={<Home />}/>
-            <Route path="/contact/" element={<Contact />}/>
-            <Route path="/projects/" element={<Projects />}/>
-            <Route path="/about/" element={<About />}/>
+            <Route path="/contact/" element={<UnderMaintanance />}/>
+            <Route path="/projects/" element={<UnderMaintanance />}/>
+            <Route path="/about/" element={<UnderMaintanance />}/>
           </Routes>
 
         </Router>
