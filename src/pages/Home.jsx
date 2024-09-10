@@ -73,8 +73,8 @@ const Home = () => {
 			
 			<h1 className="dark:text-white text-3xl font-bold pt-8 lg:pt-0">Raden Mohamad Adrian</h1>
 			<div className="mx-auto lg:mx-0 w-4/5 pt-3 border-b-2 border-green-500 opacity-25"></div>
-			<p className="dark:text-white pt-4 text-base font-bold flex my-auto justify-center lg:justify-start">
-				<FaBriefcase className="my-auto h-5 text-green-700 mr-3" />
+			<p className="dark:text-white pt-4 text-base font-bold flex my-auto justify-center lg:justify-start gap-3">
+				<FaBriefcase className="my-auto h-5 text-green-700 hidden md:block" />
 				<TypeAnimation 
 					sequence={[
 						'AI Engineer',
@@ -97,8 +97,8 @@ cybersecurity.</p>
 
 			<div className="pt-12 pb-8">
 
-					<button onClick={() => setShown(true)} className="items-center m-auto lg:m-0 bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-4 rounded-full flex">
-					View My CV <TbFileCv className="ml-2"/>
+					<button onClick={() => setShown(true)} className="items-center m-auto lg:m-0 bg-green-700 duration-300 hover:bg-green-900 hover:scale-105 text-white font-bold py-2 px-4 rounded-full flex">
+					View My Resume <TbFileCv className="ml-2"/>
 					</button> 
 
 				

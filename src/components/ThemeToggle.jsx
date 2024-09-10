@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useTheme } from '../context/ThemeContext';
 const ThemeToggle = () => {
   const { theme, toggleTheme } = useTheme();
-  const [isChecked, setIsChecked] = useState(theme === "dark")
+  const [isChecked, setIsChecked] = useState(theme === "llight")
 
 
   const handleCheckboxChange = () => {
@@ -19,9 +19,9 @@ const ThemeToggle = () => {
           onChange={handleCheckboxChange}
           className='sr-only'
         />
-        <div className='shadow-card flex h-[46px] w-[82px] items-center justify-center rounded-md bg-white dark:bg-gray-800'>
+        <div className='shadow-card flex  h-[36px] w-[60px] md:h-[46px] md:w-[82px] items-center justify-center rounded-md bg-white dark:bg-gray-800'>
           <span
-            className={`flex h-9 w-9 items-center justify-center rounded ${
+            className={`flex h-6 w-6 md:h-9 md:w-9 items-center justify-center rounded ${
               !isChecked ? 'bg-primary text-white' : 'text-primary'
             }`}
           >
@@ -48,7 +48,7 @@ const ThemeToggle = () => {
             </svg>
           </span>
           <span
-            className={`flex h-9 w-9 items-center justify-center rounded ${
+            className={`flex h-6 w-6 md:h-9 md:w-9 items-center justify-center rounded ${
               isChecked ? 'bg-primary text-white' : 'text-primary'
             }`}
           >

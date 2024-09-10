@@ -27,7 +27,7 @@ const Navbar = () => {
     <div className='sticky top-0 z-40 bg-green-500 dark:bg-black flex justify-between  items-center h-24 mx-auto px-4 text-black dark:text-white '>
       {/* Logo */}
       <Link to="/" className="z-20"> 
-        <h1 className='w-full text-xl font-bold text-white dark:text-primary flex gap-3 items-center'><GiSkullCrossedBones/> AdrianRamadhan27</h1>
+        <h1 className='w-full md:text-xl font-bold text-white dark:text-primary flex gap-3 items-center hover:scale-105 duration-200'><GiSkullCrossedBones/> AdrianRamadhan27</h1>
       </Link>
 
       {/* Desktop Navigation */}
@@ -36,8 +36,8 @@ const Navbar = () => {
               <Link to={item.path} key={item.id}>
               <li
                   
-                  className={`p-4 rounded-xl m-2 cursor-pointer underline underline-offset-8 duration-300 hover:underline-offset-2
-                    ${location.pathname === item.path ? 'text-black dark:text-primary' : 'text-white'}
+                  className={`p-4 rounded-xl m-2 cursor-pointer underline text-white dark:text-primarytext-white dark:text-primary underline-offset-8 duration-300 hover:underline-offset-2 
+                    ${location.pathname === item.path ? 'font-extrabold text-xl' : 'font-extralight text-md'}
                   `}
               >
                   {item.text}
