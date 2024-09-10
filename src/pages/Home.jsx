@@ -26,7 +26,7 @@ const Home = () => {
 			{/* Modal content */}
 			<div className="bg-white w-full max-w-4xl h-full max-h-[80vh] flex flex-col shadow-lg rounded-lg overflow-hidden">
 				{/* Header */}
-				<div className="flex items-center justify-between bg-black text-white p-2">
+				<div className="flex items-center justify-between dark:bg-black dark:text-white bg-white text-green-800 p-2">
 					<div className="flex gap-2 items-center">
 						<div className="font-semibold">MyCV.pdf</div>
 

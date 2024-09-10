@@ -3,6 +3,7 @@ import { AiOutlineClose, AiOutlineMenu } from 'react-icons/ai';
 import { Link, useLocation } from "react-router-dom";
 import { useTheme } from '../context/ThemeContext';
 import { GiSkullCrossedBones } from "react-icons/gi";
+import ThemeToggle from './ThemeToggle';
 
 const Navbar = () => {
   // State to manage the navbar's visibility
@@ -23,21 +24,20 @@ const Navbar = () => {
   ];
 
   return (
-    <div className='sticky top-0 z-40 bg-green-600 dark:bg-black flex justify-between items-center h-24 mx-auto px-4 text-black dark:text-white '>
+    <div className='sticky top-0 z-40 bg-green-500 dark:bg-black flex justify-between  items-center h-24 mx-auto px-4 text-black dark:text-white '>
       {/* Logo */}
-      <Link to="/">
-      <h1 className='w-full text-3xl font-bold text-white dark:text-[#00df9a] flex gap-3 group items-center'><GiSkullCrossedBones className="group-hover:block hidden"/>Raden Mohamad Adrian</h1>
+      <Link to="/" className="z-20"> 
+        <h1 className='w-full text-xl font-bold text-white dark:text-primary flex gap-3 items-center'><GiSkullCrossedBones/> AdrianRamadhan27</h1>
       </Link>
 
       {/* Desktop Navigation */}
-      <div className="flex items-center">
-        <ul className='hidden md:flex'>
+        <ul className='items-center hidden md:flex absolute inset-x-0 justify-center'>
           {navItems.map(item => (
               <Link to={item.path} key={item.id}>
               <li
                   
-                  className={`p-4 rounded-xl m-2 cursor-pointer duration-300 hover:text-white dark:hover:text-[#00df9a] 
-                    ${location.pathname === item.path && 'underline text-white dark:text-[#00df9a]'}
+                  className={`p-4 rounded-xl m-2 cursor-pointer underline underline-offset-8 duration-300 hover:underline-offset-2
+                    ${location.pathname === item.path ? 'text-black dark:text-primary' : 'text-white'}
                   `}
               >
                   {item.text}
@@ -47,17 +47,16 @@ const Navbar = () => {
           ))}
 
         </ul>
-        <button
-          onClick={toggleTheme}
-          className="h-fit p-2 bg-green-400 hover:bg-green-700 dark:bg-gray-900 dark:hover:bg-green-950 text-black dark:text-white rounded"
-        >
-          {theme === "light" ? "☀️" : "🌙"}
-        </button>
-        {/* Mobile Navigation Icon */}
-        <div onClick={handleNav} className='block md:hidden ml-3'>
-          {nav ? <AiOutlineClose size={20} className="cursor-pointer"/> : <AiOutlineMenu size={20} className="cursor-pointer"/>}
+        
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          {/* Mobile Navigation Icon */}
+          <div onClick={handleNav} className='block md:hidden text-white dark:text-primary'>
+            {nav ? <AiOutlineClose size={20} className="cursor-pointer"/> : <AiOutlineMenu size={20} className="cursor-pointer"/>}
+          </div>
+        
         </div>
-      </div>
+
 
 
 
@@ -74,7 +73,7 @@ const Navbar = () => {
       >
         {/* Mobile Logo */}
         <Link to="/">
-        <h1 className='w-full text-3xl font-bold dark:text-[#00df9a] text-white m-4 flex gap-3 group'><GiSkullCrossedBones className="group-hover:block hidden"/>Raden Mohamad Adrian</h1>
+        <h1 className='w-full text-3xl font-bold dark:text-[#00df9a] text-white m-4 flex gap-3'><GiSkullCrossedBones/></h1>
         </Link>
         {/* Mobile Navigation Items */}
         {navItems.map(item => (
