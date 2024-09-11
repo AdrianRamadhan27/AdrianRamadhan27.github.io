@@ -44,10 +44,10 @@ const Navbar = ({onNavigate}) => {
   ];
 
   return (
-    <div className='sticky top-0 z-40 bg-green-500 dark:bg-black flex justify-between items-center h-24 mx-auto px-4 text-black dark:text-white '>
+    <div className='sticky top-0 z-40 bg-green-500 dark:bg-black flex justify-between items-center h-16 md:h-20  mx-auto px-4 text-black dark:text-white '>
       {/* Logo */}
       <button onClick={() => onNavigate('/')} className="z-10">
-        <h1 className='w-full md:text-xl font-bold text-white dark:text-primary flex gap-3 items-center hover:scale-105 duration-500 group'>
+        <h1 className='w-full md:text-2xl font-bold text-white dark:text-primary flex gap-3 items-center hover:scale-105 duration-500 group'>
           <GiSkullCrossedBones className="group-hover:animate-spin" />
           AdrianRamadhan27
         </h1>

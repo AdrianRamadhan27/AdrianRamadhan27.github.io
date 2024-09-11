@@ -40,7 +40,7 @@ const ThemeToggle = () => {
               isChecked ? 'text-white' : 'text-green-500'
             }`}
           >
-            <GoMoon className="h-3 w-3 md:h-5 md:w-5"/>
+            <GoMoon className="h-3 w-3 md:h-5 md:w-5 md:mr-2"/>
           </span>
         </div>
       </label>
