@@ -10,6 +10,14 @@ import UnderMaintanance from './components/UnderMaintenance';
 import { useState, useEffect } from 'react';
 import { GiSkullCrossedBones } from 'react-icons/gi';
 
+function App() {
+  return (
+    <Router basename={import.meta.env.BASE_URL}>
+      <InnerApp />
+    </Router>
+  )
+}
+
 function InnerApp() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [nextRoute, setNextRoute] = useState(null); // New state for delayed route
@@ -62,4 +70,4 @@ function InnerApp() {
   );
 }
 
-export default InnerApp;
+export default App;
