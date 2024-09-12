@@ -8,7 +8,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/layout/NavBar';
 import UnderMaintanance from './pages/UnderMaintenance';
 import { useState, useEffect } from 'react';
-import { GiSkullCrossedBones } from 'react-icons/gi';
+import MyFooter from './components/layout/MyFooter';
 import Loading from './pages/Loading';
 
 function App() {
@@ -53,12 +53,13 @@ function InnerApp() {
         <div id="animation-wrapper" className={`transition-opacity duration-500 ease-out`}>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/contact/" element={<UnderMaintanance />} />
+            <Route path="/contact/" element={<Contact />} />
             <Route path="/projects/" element={<UnderMaintanance />} />
             <Route path="/about/" element={<About />} />
             <Route path="/loading" element={<Loading />} />
           </Routes>
         </div>
+        <MyFooter />
       </div>
     </ThemeProvider>
   );

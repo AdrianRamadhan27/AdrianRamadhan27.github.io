@@ -20,6 +20,13 @@ jobs:
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
 
+      # Inject environment variables from GitHub Secrets
+      - name: Inject environment variables
+        run: |
+          echo "VITE_EMAILJS_SERVICE_ID=${{ secrets.EMAILJS_SERVICE_ID }}" >> .env
+          echo "VITE_EMAILJS_TEMPLATE_ID=${{ secrets.EMAILJS_TEMPLATE_ID }}" >> .env
+          echo "VITE_EMAILJS_PUBLIC_KEY=${{ secrets.EMAILJS_PUBLIC_KEY }}" >> .env
+
       - name: Build project
         run: npm run build
 

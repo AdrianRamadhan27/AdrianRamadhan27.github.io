@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AiOutlineClose, AiOutlineMenu } from 'react-icons/ai';
 import { useLocation } from "react-router-dom";
-import { useTheme } from '../../context/ThemeContext';
 import { GiSkullCrossedBones } from "react-icons/gi";
 import ThemeToggle from '../ui/ThemeToggle';
 const Navbar = ({onNavigate}) => {
   // State to manage the navbar's visibility
   const [nav, setNav] = useState(false);
-  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navRef = useRef(); // Reference for sidebar
 
@@ -37,9 +35,10 @@ const Navbar = ({onNavigate}) => {
 
   // Array containing navigation items
   const navItems = [
-    { id: 1, text: 'About', path: '/about' },
-    { id: 2, text: 'Projects', path: '/projects' },
-    { id: 3, text: 'Contact', path: '/contact' },
+    { id: 1, text: 'Home', path: '/' },
+    { id: 2, text: 'About', path: '/about' },
+    { id: 3, text: 'Projects', path: '/projects' },
+    { id: 4, text: 'Contact', path: '/contact' },
   ];
 
   return (
@@ -84,7 +83,7 @@ const Navbar = ({onNavigate}) => {
         ref={navRef} // Reference to detect clicks outside
         className={
           nav
-            ? 'fixed md:hidden left-0 top-0 w-[60%] h-full border-r dark:border-r-gray-900 bg-green-500 dark:bg-[#000300] ease-in-out duration-500 z-50'
+            ? 'fixed md:hidden left-0 top-0 w-[60%] h-full border-r dark:border-r-gray-900 bg-green-500 dark:bg-[#000300] ease-in-out duration-500 z-50 bg-opacity-75 dark:bg-opacity-75'
             : 'ease-in-out w-[60%] duration-500 fixed top-0 bottom-0 left-[-100%]'
         }
       >
