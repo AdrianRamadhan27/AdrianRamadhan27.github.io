@@ -111,7 +111,7 @@ const ChatModal = ({ onClose }) => {
         </form>
 
         {loading ? (
-          <div className="text-white mt-4">Thinking the answer...</div>
+          <div className="text-black dark:text-white mt-4">Thinking the answer...</div>
         ) : (
           <div id="answer" className="text-white mt-4 bg-gray-600 rounded-md p-2 overflow-clip">
             <TypeAnimation 

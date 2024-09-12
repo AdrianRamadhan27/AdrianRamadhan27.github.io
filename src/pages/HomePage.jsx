@@ -7,8 +7,6 @@ import { SiHuggingface } from "react-icons/si";
 
 import { TypeAnimation } from 'react-type-animation';
 import TechStacks from "../components/layout/TechStacks";
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/toolbar/lib/styles/index.css';
 import Contact from "../components/layout/Contact";
 import PDFViewer from "../components/layout/PDFViewer";
 
