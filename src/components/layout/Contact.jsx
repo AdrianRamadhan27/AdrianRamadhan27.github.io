@@ -1,6 +1,7 @@
 import React from "react";
 import emailjs from '@emailjs/browser';
 import { useState } from "react";
+import Toast from "../ui/Toast";
 export default function Contact() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [stateMessage, setStateMessage] = useState(null);
@@ -9,6 +10,7 @@ export default function Contact() {
 		e.persist();
 		e.preventDefault();
 		setIsSubmitting(true);
+
 		emailjs
 		.sendForm(
 			import.meta.env.VITE_EMAILJS_SERVICE_ID,
@@ -18,29 +20,23 @@ export default function Contact() {
 		)
 		.then(
 			(result) => {
-			setStateMessage('Message sent!');
-			setIsSubmitting(false);
-			setTimeout(() => {
-				setStateMessage(null);
-			}, 5000); // hide message after 5 seconds
+				setStateMessage('Message sent!');
+				setIsSubmitting(false);
 			},
 			(error) => {
-			setStateMessage('Something went wrong, please try again later');
-			setIsSubmitting(false);
-			setTimeout(() => {
-				setStateMessage(null);
-			}, 5000); // hide message after 5 seconds
+				setStateMessage('Something went wrong, please try again later');
+				setIsSubmitting(false);
 			}
 		);
 		
 		// Clears the form after sending the email
 		e.target.reset();
 	};
+
   
 	return (
         <div className="bg-opacity-75 dark:bg-opacity-75 rounded-md shadow-lg  flex flex-col bg-white dark:bg-black text-black dark:text-white gap-3 m-10 md:m-16 h-fit text-center p-3 md:p-5 hover:scale-105 duration-300">
             <h1 className="text-2xl font-bold">Get in Touch with Me</h1>
-            <p>or directly through my email <a className="text-blue-700 hover:text-blue-500" href="mailto:ramadhanadrian2710@gmail.com" target="_blank">ramadhanadrian2710@gmail.com</a></p>
             <form id="contact-form" onSubmit={sendEmail} className="p-4 md:p-7">
                 <div className="grid grid-rows-2 md:grid-rows-1 md:grid-cols-2 gap-3 mb-3">
                     <div className="flex flex-col gap-2 text-left">
@@ -62,8 +58,11 @@ export default function Contact() {
  
 
                 <input type="submit" value="Send" disabled={isSubmitting} className="font-bold w-fit cursor-pointer bg-green-700 px-3 py-2 mb-2 rounded-md text-white hover:bg-green-500 hover:scale-110 duration-300"/>
-                {stateMessage && <p>{stateMessage}</p>}
+                {stateMessage && <Toast message={stateMessage} onClose={() => setStateMessage(null)}/>}
+
             </form>
+            <p>or contact me directly through email <a className="text-blue-700 hover:text-blue-500" href="mailto:ramadhanadrian2710@gmail.com" target="_blank">ramadhanadrian2710@gmail.com</a></p>
+
         </div>
 			
 	);

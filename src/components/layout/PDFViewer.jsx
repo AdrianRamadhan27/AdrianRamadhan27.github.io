@@ -22,7 +22,7 @@ const PDFViewer = ({ onClose }) => {
                 {/* Header */}
                 <div className="flex items-center justify-between dark:bg-black dark:text-white bg-white text-green-800 p-2">
                     <div className="flex gap-2 items-center">
-                        <div className="font-semibold">MyCV.pdf</div>
+                        <div className="font-semibold">Updated: 13-08-24</div>
 
                         <a href="files/MyCV.pdf" download>
                             <button

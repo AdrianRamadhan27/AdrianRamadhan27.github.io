@@ -1,9 +1,9 @@
 // source: https://github.com/tailwindtoolbox/Profile-Card
 import { useState } from "react";
 import { FaBriefcase, FaMedium } from "react-icons/fa";
-import { TbFileCv } from "react-icons/tb";
 import { FaGithub, FaLinkedin, FaInstagram } from "react-icons/fa6";
 import { SiHuggingface } from "react-icons/si";
+import { MdOutlineDocumentScanner } from "react-icons/md";
 
 import { TypeAnimation } from 'react-type-animation';
 import TechStacks from "../components/layout/TechStacks";
@@ -51,8 +51,8 @@ const HomePage = () => {
 
 							<div className="pt-12 pb-8">
 
-									<button onClick={() => setShown(true)} className="items-center m-auto lg:m-0 bg-green-700 duration-300 hover:bg-green-900 hover:scale-105 text-white font-bold py-2 px-4 rounded-full flex">
-									View My Resume <TbFileCv className="ml-2"/>
+									<button onClick={() => setShown(true)} className="items-center m-auto lg:m-0 bg-green-700 duration-300 hover:bg-green-900 hover:scale-105 text-white font-bold py-2 px-4 gap-2 rounded-full flex">
+									<MdOutlineDocumentScanner /> View My Resume 
 									</button> 
 
 								

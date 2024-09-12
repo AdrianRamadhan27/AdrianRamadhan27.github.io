@@ -15,7 +15,10 @@ export default {
           DEFAULT: '#00df9a',
           hover: '#039e6e'
         }
-      }
+      },
+      animation: {
+        'fade-in-out': 'fade-in-out 5s ease-in-out',
+      },
     },
   },
   plugins: [],
