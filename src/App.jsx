@@ -10,6 +10,8 @@ import UnderMaintanance from './pages/UnderMaintenance';
 import { useState, useEffect } from 'react';
 import MyFooter from './components/layout/MyFooter';
 import Loading from './pages/LoadingPage';
+import ScrollToTop from './components/layout/ScrollToTop';
+import ProgressBar from "react-scroll-progress-bar"; 
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
 
 function InnerApp() {
   const [nextRoute, setNextRoute] = useState(null); // New state for delayed route
+  const [scrollProgress, setScrollProgress] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -42,15 +45,35 @@ function InnerApp() {
     }
   };
 
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = window.scrollY;
+      const progress = (scrolled / scrollableHeight) * 100;
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    // Cleanup the event listener on component unmount
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+
   return (
     <ThemeProvider>
       <div className='font-grotesk '>
         {/* Navbar */}
         <Navbar onNavigate={handleNavigate} />
-
-
+        <div
+      className="fixed top-0 left-0 z-50 bg-white dark:bg-primary h-1"
+      style={{ width: `${scrollProgress}%`, transition: 'width 0.25s ease-out' }}
+    />
         {/* Main Content */}
-        <div id="animation-wrapper" className={`transition-opacity duration-500 ease-out`}>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/contact/" element={<ContactPage />} />
@@ -58,7 +81,6 @@ function InnerApp() {
             <Route path="/about/" element={<AboutPage />} />
             <Route path="/loading" element={<Loading />} />
           </Routes>
-        </div>
         <MyFooter />
       </div>
     </ThemeProvider>

@@ -1,7 +1,7 @@
 import TechCard from "../ui/TechCard";
 export default function TechStacks() {
     return (
-        <div className="bg-opacity-75 dark:bg-opacity-75 rounded-md shadow-lg p-3 flex flex-col bg-white dark:bg-black text-black dark:text-white gap-3 m-10 md:m-16 h-fit">
+        <div className="bg-opacity-75 dark:bg-opacity-75 rounded-md shadow-lg p-3 flex flex-col bg-white dark:bg-black text-black dark:text-white gap-3 m-10 md:m-16 h-fit hover:scale-105 duration-300">
             <h1 className="text-2xl font-bold text-center">Tools I Use</h1>
             <div className="grid grid-rows-4 md:grid-rows-1 md:grid-cols-4">
                 <div className="flex flex-col gap-2 border-green-300 md:border-r-2 border-dashed px-2 py-2 md:py-0">
