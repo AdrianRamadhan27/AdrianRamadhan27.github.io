@@ -1,15 +1,15 @@
 import './App.css';
 import { HashRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import Home from './pages/Home';
-import Contact from './pages/Contact';
-import Projects from './pages/Projects';
-import About from './pages/About';
+import HomePage from './pages/HomePage';
+import ContactPage from './pages/ContactPage';
+import ProjectsPage from './pages/ProjectsPage';
+import AboutPage from './pages/AboutPage';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/layout/NavBar';
 import UnderMaintanance from './pages/UnderMaintenance';
 import { useState, useEffect } from 'react';
 import MyFooter from './components/layout/MyFooter';
-import Loading from './pages/Loading';
+import Loading from './pages/LoadingPage';
 
 function App() {
   return (
@@ -44,7 +44,7 @@ function InnerApp() {
 
   return (
     <ThemeProvider>
-      <div className='relative font-grotesk dark:bg-green-900 dark:bg-opacity-50 min-h-screen'>
+      <div className='font-grotesk '>
         {/* Navbar */}
         <Navbar onNavigate={handleNavigate} />
 
@@ -52,10 +52,10 @@ function InnerApp() {
         {/* Main Content */}
         <div id="animation-wrapper" className={`transition-opacity duration-500 ease-out`}>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/contact/" element={<Contact />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/contact/" element={<ContactPage />} />
             <Route path="/projects/" element={<UnderMaintanance />} />
-            <Route path="/about/" element={<About />} />
+            <Route path="/about/" element={<AboutPage />} />
             <Route path="/loading" element={<Loading />} />
           </Routes>
         </div>

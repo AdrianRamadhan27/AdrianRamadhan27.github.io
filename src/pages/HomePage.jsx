@@ -16,9 +16,10 @@ import { toolbarPlugin } from '@react-pdf-viewer/toolbar';
 import TechStacks from "../components/layout/TechStacks";
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/toolbar/lib/styles/index.css';
+import Contact from "../components/layout/Contact";
 
 
-const Home = () => {
+const HomePage = () => {
 	const [shown, setShown] = useState(false);
 	const toolbarPluginInstance = toolbarPlugin();
 	const { Toolbar } = toolbarPluginInstance;
@@ -128,9 +129,11 @@ const Home = () => {
 									
 			</div>
 			<TechStacks />
+
+			<Contact />
 			
 		</div>
 	);
 };
 
-export default Home;
+export default HomePage;
