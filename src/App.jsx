@@ -11,8 +11,7 @@ import { useState, useEffect } from 'react';
 import MyFooter from './components/layout/MyFooter';
 import Loading from './pages/LoadingPage';
 import ScrollToTop from './components/layout/ScrollToTop';
-import ProgressBar from "react-scroll-progress-bar"; 
-
+import ChatButton from './components/ui/ChatButton';
 function App() {
   return (
     <Router basename={import.meta.env.BASE_URL}>
@@ -69,9 +68,9 @@ function InnerApp() {
         {/* Navbar */}
         <Navbar onNavigate={handleNavigate} />
         <div
-      className="fixed top-0 left-0 z-50 bg-white dark:bg-primary h-1"
-      style={{ width: `${scrollProgress}%`, transition: 'width 0.25s ease-out' }}
-    />
+          className="fixed top-0 left-0 z-50 bg-white dark:bg-primary h-1"
+          style={{ width: `${scrollProgress}%`, transition: 'width 0.25s ease-out' }}
+        />
         {/* Main Content */}
           <ScrollToTop />
           <Routes>
@@ -82,6 +81,7 @@ function InnerApp() {
             <Route path="/loading" element={<Loading />} />
           </Routes>
         <MyFooter />
+        <ChatButton />
       </div>
     </ThemeProvider>
   );

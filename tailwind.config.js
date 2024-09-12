@@ -12,7 +12,8 @@ export default {
       },
       colors: {
         primary: {
-          DEFAULT: '#00df9a'
+          DEFAULT: '#00df9a',
+          hover: '#039e6e'
         }
       }
     },
