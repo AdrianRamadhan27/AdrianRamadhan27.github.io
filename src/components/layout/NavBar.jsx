@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AiOutlineClose, AiOutlineMenu } from 'react-icons/ai';
 import { useLocation } from "react-router-dom";
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { GiSkullCrossedBones } from "react-icons/gi";
-import ThemeToggle from './ThemeToggle';
-
+import ThemeToggle from '../ui/ThemeToggle';
 const Navbar = ({onNavigate}) => {
   // State to manage the navbar's visibility
   const [nav, setNav] = useState(false);
@@ -46,32 +45,37 @@ const Navbar = ({onNavigate}) => {
   return (
     <div className='sticky top-0 z-40 bg-green-500 dark:bg-black flex justify-between items-center h-16 md:h-20  mx-auto px-4 text-black dark:text-white '>
       {/* Logo */}
-      <button onClick={() => onNavigate('/')} className="z-10">
-        <h1 className='w-full md:text-2xl font-bold text-white dark:text-primary flex gap-3 items-center hover:scale-105 duration-500 group'>
+      <button onClick={() => onNavigate('/')} className="">
+        <h1 className='w-full md:text-2xl text-xl font-bold text-white dark:text-primary flex gap-3 items-center hover:scale-105 duration-500 group'>
           <GiSkullCrossedBones className="group-hover:animate-spin" />
           AdrianRamadhan27
         </h1>
       </button>
 
-      {/* Desktop Navigation */}
-      <ul className='items-center hidden md:flex absolute inset-x-0 justify-center'>
-        {navItems.map(item => (
-          <button onClick={() => onNavigate(item.path)} key={item.id}>
-            <li className={`p-4 rounded-xl m-2 cursor-pointer underline text-white dark:text-primary underline-offset-8 duration-300 hover:underline-offset-2
-                ${location.pathname === item.path ? 'font-extrabold text-xl' : 'font-extralight text-md'}
-              `}>
-              {item.text}
-            </li>
-          </button>
-        ))}
-      </ul>
+      <div className="flex items-center">
 
-      {/* Theme toggle and burger icon */}
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
-        {/* Mobile Navigation Icon */}
-        <div onClick={handleNav} className='block md:hidden text-white dark:text-primary'>
-          {nav ? <AiOutlineClose size={20} className="cursor-pointer" /> : <AiOutlineMenu size={20} className="cursor-pointer" />}
+
+      
+        {/* Desktop Navigation */}
+        <ul className='items-center hidden md:flex justify-center mr-3'>
+          {navItems.map(item => (
+            <button onClick={() => onNavigate(item.path)} key={item.id}>
+              <li className={`p-4 rounded-xl m-2 cursor-pointer underline text-white dark:text-primary underline-offset-8 duration-300 hover:underline-offset-2
+                  ${location.pathname === item.path ? 'font-extrabold text-xl' : 'font-extralight text-md'}
+                `}>
+                {item.text}
+              </li>
+            </button>
+          ))}
+        </ul>
+
+        {/* Theme toggle and burger icon */}
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          {/* Mobile Navigation Icon */}
+          <div onClick={handleNav} className='block md:hidden text-white dark:text-primary'>
+            {nav ? <AiOutlineClose size={20} className="cursor-pointer" /> : <AiOutlineMenu size={20} className="cursor-pointer" />}
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 // source: https://github.com/tailwindtoolbox/Profile-Card
 import {useState} from "react";
-import { FaDownload, FaBriefcase } from "react-icons/fa";
+import { FaDownload, FaBriefcase, FaMedium } from "react-icons/fa";
 import { TbFileCv } from "react-icons/tb";
 import { IoClose } from "react-icons/io5";
 import { FaGithub, FaLinkedin, FaInstagram } from "react-icons/fa6";
@@ -110,6 +110,7 @@ const Home = () => {
 							<div className="mt-6 pb-16 lg:pb-0 justify-center lg:justify-start lg:w-full mx-auto flex flex-wrap items-center gap-10">
 								<a className="link" href="https://www.instagram.com/adrian_voiz/" target="_blank" data-tippy-content="@instagram_handle"><FaInstagram className="h-8 w-8 fill-current text-gray-600 hover:text-green-700"/></a>
 								<a className="link" href="https://www.linkedin.com/in/adrian-voiz/" target="_blank" data-tippy-content="@linkedin_handle"><FaLinkedin className="h-8 w-8 fill-current text-gray-600 hover:text-green-700"/></a>
+								<a className="link" href="https://medium.com/@ramadhanadrian2710" target="_blank" data-tippy-content="@medium_handle"><FaMedium className="h-8 w-8 fill-current text-gray-600 hover:text-green-700"/></a>
 								<a className="link" href="https://github.com/AdrianRamadhan27" target="_blank" data-tippy-content="@github_handle"><FaGithub className="h-8 w-8 fill-current text-gray-600 hover:text-green-700"/></a>
 								<a className="link" href="https://huggingface.co/raden-mohamad11" target="_blank" data-tippy-content="@huggingface_handle"><SiHuggingface className="h-8 w-8 fill-current text-gray-600 hover:text-green-700"/></a>
 							</div>

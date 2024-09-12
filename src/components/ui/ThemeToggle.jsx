@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { GoSun, GoMoon } from 'react-icons/go';
 
 const ThemeToggle = () => {
