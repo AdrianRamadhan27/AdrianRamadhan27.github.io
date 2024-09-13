@@ -1,16 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Worker } from "@react-pdf-viewer/core";
-import { Viewer } from "@react-pdf-viewer/core";
-import { toolbarPlugin } from '@react-pdf-viewer/toolbar';
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/toolbar/lib/styles/index.css';
 import { FaDownload } from 'react-icons/fa';
 import { IoClose } from 'react-icons/io5';
 
+const file_id = import.meta.env.VITE_CV_FILE_ID;
 const PDFViewer = ({ onClose }) => {
-    const toolbarPluginInstance = toolbarPlugin();
-    const { Toolbar } = toolbarPluginInstance;
 
     return ReactDOM.createPortal(
         <div
@@ -22,9 +16,9 @@ const PDFViewer = ({ onClose }) => {
                 {/* Header */}
                 <div className="flex items-center justify-between dark:bg-black dark:text-white bg-white text-green-800 p-2">
                     <div className="flex gap-2 items-center">
-                        <div className="font-semibold">Updated: 13-08-24</div>
+                        <div className="font-semibold">MyCV.pdf</div>
 
-                        <a href="files/MyCV.pdf" download>
+                        <a href={`https://drive.google.com/uc?export=download&id=${file_id}`}>
                             <button
                                     className="bg-green-600 hover:bg-green-700 text-white px-2 rounded flex items-center gap-2"
                                 >
@@ -45,10 +39,7 @@ const PDFViewer = ({ onClose }) => {
 
                 {/* PDF viewer */}
                 <div className="flex-grow overflow-auto">
-                    <Toolbar />
-                    <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
-                        <Viewer fileUrl="files/MyCV.pdf" plugins={[toolbarPluginInstance]}/>
-                    </Worker>
+                <iframe src={`https://drive.google.com/file/d/${file_id}/preview`} className="w-full h-full" allow="autoplay"></iframe>                
                 </div>
             </div>
         </div>,
