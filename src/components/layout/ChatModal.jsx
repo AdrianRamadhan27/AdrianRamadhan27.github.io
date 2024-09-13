@@ -43,12 +43,18 @@ const ChatModal = ({ onClose }) => {
             <IoClose className="h-5 w-5" />
           </button>
         </div>
-        <h2 className="text-2xl font-bold mb-4 text-black dark:text-white text-center">
-          AdrianRamadhan27.AI
-        </h2>
+        <div className="flex flex-col gap-2 text-center mb-4">
+          <h2 className="text-xl md:text-2xl font-bold text-black dark:text-white ">
+            AdrianRamadhan27.AI
+          </h2>
+          <p className="text-gray-600">Powered by <a href="https://huggingface.co/meta-llama/Meta-Llama-3-70B" target="_blank" className='underline underline-offset-2 hover:underline-offset-4 duration-300'>LLaMa 3-70B</a></p>
+        </div>
+
+
+
 
         <form id="chat-form" onSubmit={handleSubmit}>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center text-xs md:text-md">
             <input
               type="text"
               name="question"
@@ -64,7 +70,7 @@ const ChatModal = ({ onClose }) => {
           </div>
         </form>
 
-        <div id="answer" className="text-primary border-2 border-primary border-dashed mt-4 bg-white dark:bg-black rounded-md p-2 overflow-clip font-mono max-h-screen">
+        <div id="answer" className="text-primary text-sm md:text-md border-2 border-primary border-dashed mt-4 bg-white dark:bg-black rounded-md p-2 overflow-clip font-mono max-h-screen">
           <div className="flex justify-center">
             <img src={import.meta.env.BASE_URL+"skullcode2.svg"} alt="" className="h-20 w-20 animate-pulse"/>
           </div>
