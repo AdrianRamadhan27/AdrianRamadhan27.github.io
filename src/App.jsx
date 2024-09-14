@@ -76,7 +76,7 @@ function InnerApp() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/contact/" element={<ContactPage />} />
-            <Route path="/projects/" element={<UnderMaintanance />} />
+            <Route path="/projects/" element={<ProjectsPage />} />
             <Route path="/about/" element={<AboutPage />} />
             <Route path="/loading" element={<Loading />} />
           </Routes>

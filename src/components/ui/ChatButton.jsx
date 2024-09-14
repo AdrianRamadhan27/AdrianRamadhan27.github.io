@@ -13,10 +13,10 @@ const ChatButton = () => {
       {/* Sticky Button */}
       <button
         onClick={openModal}
-        className="fixed bottom-4 right-4 bg-green-800 hover:bg-green-600 dark:bg-primary dark:hover:bg-primary-hover text-white p-3 rounded-full shadow-lg hover:bg-[#] hover:scale-105 duration-300 transition-colors flex gap-2 items-center bg-opacity-80 dark:bg-opacity-80"
+        className="group fixed bottom-4 right-4 bg-green-800 hover:bg-green-600 dark:bg-primary dark:hover:bg-primary-hover text-white p-3 rounded-full shadow-lg hover:scale-105 duration-300 transition-colors flex gap-2 items-center bg-opacity-80 dark:bg-opacity-80"
       >
         Ask My AI
-        <FaRobot />
+        <FaRobot className="group-hover:animate-bounce duration-300"/>
       </button>
 
       {/* Modal Component */}

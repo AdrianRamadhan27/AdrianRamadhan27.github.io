@@ -1,6 +1,22 @@
 import { DiDart } from "react-icons/di";
 import { FaJava, FaPython, FaReact, FaVuejs } from "react-icons/fa";
-import { SiDjango, SiFastapi, SiFlutter, SiJavascript, SiKeras, SiPostgresql, SiPytorch, SiScikitlearn, SiSpringboot, SiTailwindcss, SiTensorflow  } from "react-icons/si";
+import { FaMeta } from "react-icons/fa6";
+import { 
+    SiDjango, 
+    SiFastapi, 
+    SiFlutter, 
+    SiJavascript, 
+    SiKeras, 
+    SiPostgresql, 
+    SiPytorch, 
+    SiScikitlearn,
+    SiSpringboot, 
+    SiTailwindcss, 
+    SiTensorflow,
+    SiPandas
+  } from "react-icons/si";
+import { RiOpenaiFill } from "react-icons/ri";
+import { IoMdFlame } from "react-icons/io";
 
 
 export const techStacks = {
@@ -19,5 +35,9 @@ export const techStacks = {
     tensorflow: SiTensorflow,
     sklearn: SiScikitlearn,
     postgres: SiPostgresql,
-    tailwind: SiTailwindcss
+    tailwind: SiTailwindcss,
+    openai: RiOpenaiFill,
+    llama: FaMeta,
+    pandas: SiPandas,
+    flame: IoMdFlame
 }

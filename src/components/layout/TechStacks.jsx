@@ -6,7 +6,7 @@ export default function TechStacks() {
             <div className="grid grid-rows-4 md:grid-rows-1 md:grid-cols-4">
                 <div className="flex flex-col gap-2 border-green-300 md:border-r-2 border-dashed px-2 py-2 md:py-0">
                     <h2 className="text-lg max-w-64 truncate">Programming Languages</h2>
-                    <div className="grid grid-cols-2 grid-rows-2 gap-2">
+                    <div className="text-sm grid grid-cols-2 grid-rows-2 gap-2">
                         <TechCard name="python"/>
                         <TechCard name="java"/>
                         <TechCard name="javascript"/>
@@ -15,7 +15,7 @@ export default function TechStacks() {
                 </div>
                 <div className="flex flex-col gap-2 border-green-300 md:border-r-2 border-dashed px-2 py-2 md:py-0">
                     <h2 className="text-lg max-w-64 truncate">Front-End</h2>
-                    <div className="grid grid-cols-2 grid-rows-2 gap-2">
+                    <div className="text-sm grid grid-cols-2 grid-rows-2 gap-2">
                         <TechCard name="vue"/>
                         <TechCard name="react"/>
                         <TechCard name="flutter"/>
@@ -24,7 +24,7 @@ export default function TechStacks() {
                 </div>
                 <div className="flex flex-col gap-2 border-green-300 md:border-r-2 border-dashed px-2 py-2 md:py-0">
                     <h2 className="text-lg max-w-64 truncate">Back-End</h2>
-                    <div className="grid grid-cols-2 grid-rows-2 gap-2">
+                    <div className="text-sm grid grid-cols-2 grid-rows-2 gap-2">
                         <TechCard name="django"/>
                         <TechCard name="fastapi"/>
                         <TechCard name="springboot"/>
@@ -33,7 +33,7 @@ export default function TechStacks() {
                 </div>
                 <div className="flex flex-col gap-2 px-2 py-2 md:py-0">
                     <h2 className="text-lg max-w-64 truncate">Machine Learning</h2>
-                    <div className="grid grid-cols-2 grid-rows-2 gap-2">
+                    <div className="text-sm grid grid-cols-2 grid-rows-2 gap-2">
                         <TechCard name="sklearn"/>
                         <TechCard name="keras"/>
                         <TechCard name="tensorflow"/>
