@@ -4,17 +4,17 @@
 
 @layer utilities {
     .custom-scrollbar::-webkit-scrollbar {
-      width: 8px;
+      width: 1px;
     }
     .custom-scrollbar::-webkit-scrollbar-track {
-      background: #f0f0f0; /* Background of the scrollbar track */
+      background: #0000; /* Background of the scrollbar track */
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-      background-color: #4f46e5; /* Color of the scrollbar handle */
-      border-radius: 10px; /* Roundness of the scrollbar handle */
-      border: 2px solid #e5e7eb; /* Adds padding around the handle */
+      background-color: #13752d; /* Color of the scrollbar handle */
+      border-radius: 8px; /* Roundness of the scrollbar handle */
+      border: 2px solid #0000; /* Adds padding around the handle */
     }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background-color: #3b82f6; /* Hover effect */
+      background-color: #13752d; /* Hover effect */
     }
   }

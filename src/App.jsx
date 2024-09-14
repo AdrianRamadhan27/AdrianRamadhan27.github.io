@@ -12,6 +12,7 @@ import MyFooter from './components/layout/MyFooter';
 import Loading from './pages/LoadingPage';
 import ScrollToTop from './components/layout/ScrollToTop';
 import ChatButton from './components/ui/ChatButton';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 function App() {
   return (
     <Router basename={import.meta.env.BASE_URL}>
@@ -77,6 +78,7 @@ function InnerApp() {
             <Route path="/" element={<HomePage />} />
             <Route path="/contact/" element={<ContactPage />} />
             <Route path="/projects/" element={<ProjectsPage />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
             <Route path="/about/" element={<AboutPage />} />
             <Route path="/loading" element={<Loading />} />
           </Routes>

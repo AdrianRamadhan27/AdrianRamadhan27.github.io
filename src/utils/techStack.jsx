@@ -13,10 +13,19 @@ import {
     SiSpringboot, 
     SiTailwindcss, 
     SiTensorflow,
-    SiPandas
+    SiPandas,
+    SiVercel,
+    SiGooglecloud,
+    SiGithubpages,
+    SiRailway,
+    SiPlotly,
+    SiSonarqube
   } from "react-icons/si";
 import { RiOpenaiFill } from "react-icons/ri";
 import { IoMdFlame } from "react-icons/io";
+import { TbLetterM } from "react-icons/tb";
+import { GiSloth } from "react-icons/gi";
+import { RxStack } from "react-icons/rx";
 
 
 export const techStacks = {
@@ -39,5 +48,15 @@ export const techStacks = {
     openai: RiOpenaiFill,
     llama: FaMeta,
     pandas: SiPandas,
-    flame: IoMdFlame
+    flame: IoMdFlame,
+    vercel: SiVercel,
+    gcp: SiGooglecloud,
+    gh_pages: SiGithubpages,
+    mistral: TbLetterM,
+    railway: SiRailway,
+    matplotlib: SiPlotly,
+    unsloth: GiSloth,
+    gradio: RxStack,
+    sonarqube: SiSonarqube
+
 }
