@@ -36,7 +36,7 @@ const Navbar = ({onNavigate}) => {
   // Array containing navigation items
   const navItems = [
     { id: 1, text: 'Home', path: '/' },
-    { id: 2, text: 'About', path: '/about' },
+    { id: 2, text: 'Skills', path: '/skills' },
     { id: 3, text: 'Projects', path: '/projects' },
     { id: 4, text: 'Contact', path: '/contact' },
   ];

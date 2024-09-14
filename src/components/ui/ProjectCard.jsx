@@ -2,7 +2,7 @@ import TechCard from "./TechCard";
 import { formatDate } from "../../utils/formatDate";
 export default function ProjectCard({ title, imageFile, start, end, techStacks }) {
   return (
-    <div className="group flex flex-col justify-between rounded-lg w-full h-[280px] sm:h-[320px] md:h-[340px] bg-white shadow-lg dark:bg-black hover:scale-105 duration-300">
+    <div className="group flex flex-col justify-between rounded-lg w-full h-fit md:h-[340px] bg-white shadow-lg dark:bg-black hover:scale-105 duration-300">
       {/* Ensure fixed image height with object-cover to keep aspect ratio */}
       <div className="w-full">
         <img
@@ -16,9 +16,9 @@ export default function ProjectCard({ title, imageFile, start, end, techStacks }
         <span className="text-xs text-center mb-2">
           {formatDate(start)} - {end ? formatDate(end) : "Present"}
         </span>
-        <ul className="flex gap-1 justify-center items-center p-2 text-xs overflow-x-auto">
+        <ul className="flex gap-1 justify-center items-center p-1 text-xs flex-wrap">
           {techStacks.slice(0, 3).map((tech) => (
-            <li className="w-20 md:w-28" key={tech}>
+            <li className="" key={tech}>
               <TechCard name={tech}/>
             </li>
           ))}

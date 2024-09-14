@@ -70,7 +70,7 @@ const ChatModal = ({ onClose }) => {
           </div>
         </form>
 
-        <div id="answer" className="text-primary text-sm md:text-md border-2 border-primary border-dashed mt-4 bg-white dark:bg-black rounded-md p-2 overflow-clip font-mono max-h-screen">
+        <div id="answer" className="text-primary text-sm md:text-md border-2 border-primary border-dashed mt-4 bg-white dark:bg-black rounded-md p-2 break-words font-mono max-h-screen">
           <div className="flex justify-center">
             <img src={import.meta.env.BASE_URL+"skullcode2.svg"} alt="" className="h-20 w-20 animate-pulse"/>
           </div>

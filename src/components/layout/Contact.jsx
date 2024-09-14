@@ -35,7 +35,7 @@ export default function Contact() {
 
   
 	return (
-        <div className="bg-opacity-75 dark:bg-opacity-75 rounded-md shadow-lg  flex flex-col bg-white dark:bg-black text-black dark:text-white gap-3 m-10 md:m-16 h-fit text-center p-3 md:p-5 hover:scale-105 duration-300">
+        <div className="bg-opacity-75 dark:bg-opacity-75 rounded-md shadow-lg  flex flex-col bg-white dark:bg-black text-black dark:text-white gap-3 m-10 md:m-16 h-fit text-center p-3 md:p-5 md:hover:scale-105 duration-300">
             <h1 className="text-2xl font-bold">Get in Touch with Me</h1>
             <form id="contact-form" onSubmit={sendEmail} className="p-4 md:p-7">
                 <div className="grid grid-rows-2 md:grid-rows-1 md:grid-cols-2 gap-3 mb-3">

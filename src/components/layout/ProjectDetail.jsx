@@ -4,7 +4,7 @@ import { FaExternalLinkAlt } from "react-icons/fa";
 
 export default function ProjectDetail({project}) {
     return (
-        <div className="bg-opacity-75 dark:bg-opacity-75 rounded-md shadow-lg p-3 md:p-5 flex flex-col gap-3 bg-white dark:bg-black text-black dark:text-white my-5 mx-10 md:mx-12 h-fit text-center hover:scale-105 duration-300">
+        <div className="bg-opacity-75 dark:bg-opacity-75 rounded-md shadow-lg p-3 md:p-5 flex flex-col gap-3 bg-white dark:bg-black text-black dark:text-white my-5 mb-10 mx-10 md:mx-12 h-fit text-center md:hover:scale-105 duration-300">
             <div className="flex flex-col md:flex-row gap-3 items-center">
                 <div className="w-full md:w-3/5">
                     <img
@@ -22,11 +22,11 @@ export default function ProjectDetail({project}) {
 
             <div className="flex flex-col md:flex-row gap-3">
                 <div className="w-full md:w-3/5 flex flex-col gap-3 p-3">
-                    <div className="flex flex-col gap-2 text-left">
+                    <div className="flex flex-col gap-2 text-center md:text-left">
                         <h2 className="font-bold text-xl">Technologies Used</h2>
-                        <ul className="flex flex-wrap gap-2 items-center text-xs">
+                        <ul className="flex flex-wrap gap-2 items-center text-xs justify-center md:justify-normal">
                             {project.techStacks.map((tech) => (
-                                <li className="w-24 md:w-28" key={tech}>
+                                <li className="" key={tech}>
                                     <TechCard name={tech}/>
                                 </li>
                             ))}
@@ -35,12 +35,12 @@ export default function ProjectDetail({project}) {
 
                 </div>
                 <div className="w-full md:w-2/5 flex flex-col gap-2 text-left p-3">
-                    <div className="flex justify-between">
-                        <div className="w-fit flex flex-col gap-2 text-left">
+                    <div className="flex flex-col md:flex-row gap-3 md:justify-between">
+                        <div className="w-full md:w-fit flex flex-col gap-2 text-center md:text-left">
                             <h2 className="font-bold text-xl">Type</h2>
                             <span className="text-sm">{project.type} Project</span>
                         </div>
-                        <div className="w-fit flex flex-col gap-2 text-left">
+                        <div className="w-full md:w-fit flex flex-col gap-2 text-center md:text-left">
                             <h2 className="font-bold text-xl">Timeline</h2>
                             <span className="text-sm">{formatDate(project.dateStart)} - {project.dateEnd ? formatDate(project.dateEnd) : "Present"}</span>
                         </div>

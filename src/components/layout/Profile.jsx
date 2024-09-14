@@ -12,7 +12,7 @@ export default function Profile() {
 
     return (
         <div className="max-w-4xl  flex items-center h-full  flex-wrap mx-auto mt-10">
-                <div id="profile" className="mt-5 lg:mt-0 transform transition duration-500 lg:hover:scale-110 hover:scale-105 w-full lg:w-3/5 rounded-lg  shadow-2xl bg-white dark:bg-black bg-opacity-75 dark:bg-opacity-75 mx-6 lg:mx-0">
+                <div id="profile" className="mt-5 lg:mt-0 transform transition duration-500 md:hover:scale-110  w-full lg:w-3/5 rounded-lg  shadow-2xl bg-white dark:bg-black bg-opacity-75 dark:bg-opacity-75 mx-6 lg:mx-0">
             
 
                     <div className="p-4 md:p-12 text-center lg:text-left">

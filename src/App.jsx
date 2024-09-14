@@ -3,7 +3,7 @@ import { HashRouter as Router, Route, Routes, useLocation, useNavigate } from 'r
 import HomePage from './pages/HomePage';
 import ContactPage from './pages/ContactPage';
 import ProjectsPage from './pages/ProjectsPage';
-import AboutPage from './pages/AboutPage';
+import SkillsPage from './pages/SkillsPage';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/layout/NavBar';
 import UnderMaintanance from './pages/UnderMaintenance';
@@ -65,25 +65,30 @@ function InnerApp() {
 
   return (
     <ThemeProvider>
-      <div className='font-grotesk '>
-        {/* Navbar */}
+      <div className="font-grotesk">
+
+
         <Navbar onNavigate={handleNavigate} />
-        <div
-          className="fixed top-0 left-0 z-50 bg-white dark:bg-primary h-1"
-          style={{ width: `${scrollProgress}%`, transition: 'width 0.25s ease-out' }}
-        />
-        {/* Main Content */}
-          <ScrollToTop />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/contact/" element={<ContactPage />} />
-            <Route path="/projects/" element={<ProjectsPage />} />
-            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-            <Route path="/about/" element={<AboutPage />} />
-            <Route path="/loading" element={<Loading />} />
-          </Routes>
-        <MyFooter />
-        <ChatButton />
+
+        <div className=' h-full overflow-y-auto bg-gradient-to-r from-white via-green-200 to-green-400 dark:bg-gradient-to-r dark:from-green-300 dark:via-green-600 dark:to-green-900'>
+          {/* Navbar */}
+          <div
+            className="fixed top-0 left-0 z-50 bg-white dark:bg-primary h-1"
+            style={{ width: `${scrollProgress}%`, transition: 'width 0.25s ease-out' }}
+          />
+          {/* Main Content */}
+            <ScrollToTop />
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/contact/" element={<ContactPage />} />
+              <Route path="/projects/" element={<ProjectsPage />} />
+              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+              <Route path="/skills/" element={<SkillsPage />} />
+              <Route path="/loading" element={<Loading />} />
+            </Routes>
+          <MyFooter />
+          <ChatButton />
+        </div>
       </div>
     </ThemeProvider>
   );

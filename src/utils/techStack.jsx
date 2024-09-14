@@ -1,6 +1,6 @@
-import { DiDart } from "react-icons/di";
-import { FaJava, FaPython, FaReact, FaVuejs } from "react-icons/fa";
-import { FaMeta } from "react-icons/fa6";
+import { DiDart, DiProlog } from "react-icons/di";
+import { FaDocker, FaJava, FaPython, FaReact, FaVuejs } from "react-icons/fa";
+import { FaAws, FaFigma, FaMeta } from "react-icons/fa6";
 import { 
     SiDjango, 
     SiFastapi, 
@@ -19,7 +19,12 @@ import {
     SiGithubpages,
     SiRailway,
     SiPlotly,
-    SiSonarqube
+    SiSonarqube,
+    SiKalilinux,
+    SiMysql,
+    SiSupabase,
+    SiJquery,
+    SiNumpy
   } from "react-icons/si";
 import { RiOpenaiFill } from "react-icons/ri";
 import { IoMdFlame } from "react-icons/io";
@@ -29,34 +34,42 @@ import { RxStack } from "react-icons/rx";
 
 
 export const techStacks = {
-    react: FaReact,
-    vue: FaVuejs,
-    django: SiDjango,
-    fastapi: SiFastapi,
-    springboot: SiSpringboot,
-    flutter: SiFlutter,
-    python: FaPython,
-    java: FaJava,
-    javascript: SiJavascript,
-    dart: DiDart,
-    keras: SiKeras,
-    pytorch: SiPytorch,
-    tensorflow: SiTensorflow,
-    sklearn: SiScikitlearn,
-    postgres: SiPostgresql,
-    tailwind: SiTailwindcss,
-    openai: RiOpenaiFill,
-    llama: FaMeta,
-    pandas: SiPandas,
-    flame: IoMdFlame,
-    vercel: SiVercel,
-    gcp: SiGooglecloud,
-    gh_pages: SiGithubpages,
-    mistral: TbLetterM,
-    railway: SiRailway,
-    matplotlib: SiPlotly,
-    unsloth: GiSloth,
-    gradio: RxStack,
-    sonarqube: SiSonarqube
-
+    "React.js": FaReact,
+    "Vue.js": FaVuejs,
+    "django": SiDjango,
+    "fastapi": SiFastapi,
+    "SpringBoot": SiSpringboot,
+    "Flutter": SiFlutter,
+    "Python": FaPython,
+    "Java": FaJava,
+    "Javascript": SiJavascript,
+    "Dart": DiDart,
+    "keras": SiKeras,
+    "pytorch": SiPytorch,
+    "tensorflow": SiTensorflow,
+    "scikit-learn": SiScikitlearn,
+    "Postgres": SiPostgresql,
+    "Tailwind CSS": SiTailwindcss,
+    "OpenAI": RiOpenaiFill,
+    "LLaMa": FaMeta,
+    "pandas": SiPandas,
+    "Flame": IoMdFlame,
+    "Vercel": SiVercel,
+    "GCP": SiGooglecloud,
+    "Github-pages": SiGithubpages,
+    "Mistral": TbLetterM,
+    "Railway": SiRailway,
+    "matplotlib": SiPlotly,
+    "Unsloth": GiSloth,
+    "Gradio": RxStack,
+    "Sonarqube": SiSonarqube,
+    "Figma": FaFigma,
+    "Kali Linux": SiKalilinux,
+    "SWI-Prolog": DiProlog,
+    "MySQL": SiMysql,
+    "Supabase": SiSupabase,
+    "jQuery": SiJquery,
+    "AWS": FaAws,
+    "numpy": SiNumpy,
+    "Docker": FaDocker
 }

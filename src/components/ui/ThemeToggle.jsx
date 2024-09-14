@@ -24,7 +24,7 @@ const ThemeToggle = () => {
         <div className='relative flex  h-[36px] w-[56px] md:h-[46px] md:w-[86px] items-center justify-between  rounded-md bg-white dark:bg-gray-800 p-1 '>
           {/* Background slider */}
           <div
-            className={`absolute transition-transform duration-300 ease-in-out h-[24px] w-[24px] md:h-[38px] md:w-[38px] rounded-md bg-gradient-to-r bg-green-500 dark:bg-primary hover:bg-green-500 hover:dark:bg-primary ${
+            className={`absolute transition-transform duration-300 ease-in-out h-[24px] w-[24px] md:h-[38px] md:w-[38px] rounded-md bg-green-500 dark:bg-primary hover:bg-green-500 hover:dark:bg-primary ${
               isChecked ? 'translate-x-full' : 'translate-x-0'
             }`}
           ></div>
