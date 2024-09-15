@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { IoClose } from 'react-icons/io5';
 import { TypeAnimation } from 'react-type-animation';
 import getGroqChatCompletion from '../../utils/groqChat';
 const ChatModal = ({ onClose }) => {
+  const placeholders = ["What is your goal in life?", "What is your favourite anime?", "What is your current occupation?", "What are your hobbies"];
+
   const [question, setQuestion] = useState(''); // Store the input
   const [answer, setAnswer] = useState("Hello! Ask anything about me and I will respond immediately"); // Store the answer
   const [loading, setLoading] = useState(false); // Loading state
@@ -23,6 +25,24 @@ const ChatModal = ({ onClose }) => {
     setLoading(false);
     setQuestion(''); // Clear input field
   };
+
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = () => {
+      setIndex(prevIndex => {
+        if(prevIndex === placeholders.length - 1){
+          return 0;
+        } 
+        return prevIndex + 1;
+      })
+    };
+    setInterval(timer, 3000);
+    
+    //cleanup function in order clear the interval timer
+    //when the component unmounts
+    return () => { clearInterval(timer); }
+  }, []);
 
 
 
@@ -59,7 +79,7 @@ const ChatModal = ({ onClose }) => {
               type="text"
               name="question"
               className="w-full p-2 rounded-md bg-green-950 dark:bg-white text-white dark:text-black"
-              placeholder="What is your favourite anime?"
+              placeholder={placeholders[index]}
               value={question}
               onChange={(e) => setQuestion(e.target.value)} // Update state on input change
               required
