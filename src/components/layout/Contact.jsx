@@ -2,6 +2,7 @@ import React from "react";
 import emailjs from '@emailjs/browser';
 import { useState } from "react";
 import Toast from "../ui/Toast";
+
 export default function Contact() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [stateMessage, setStateMessage] = useState(null);
@@ -61,7 +62,7 @@ export default function Contact() {
                 {stateMessage && <Toast message={stateMessage} onClose={() => setStateMessage(null)}/>}
 
             </form>
-            <p>or contact me directly through email <a className="text-blue-700 hover:text-blue-500" href="mailto:ramadhanadrian2710@gmail.com" target="_blank">ramadhanadrian2710@gmail.com</a></p>
+            <p className="flex flex-wrap text-sm items-center justify-center gap-1 border-2 border-green-600 border-opacity-25 p-4 rounded-md md:mx-4">You can also contact me through my email <a className="text-blue-700 hover:text-blue-500" href="mailto:ramadhanadrian2710@gmail.com" target="_blank">ramadhanadrian2710@gmail.com</a></p>
 
         </div>
 			

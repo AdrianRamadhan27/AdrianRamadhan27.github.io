@@ -1,7 +1,6 @@
 // source: https://github.com/tailwindtoolbox/Profile-Card
 import { useState } from "react";
-import { FaBriefcase, FaMedium } from "react-icons/fa";
-import { FaGithub, FaLinkedin, FaInstagram } from "react-icons/fa6";
+import { FaMedium, FaGithub, FaLinkedin, FaInstagram } from "react-icons/fa6";
 import { SiHuggingface } from "react-icons/si";
 import { MdOutlineDocumentScanner } from "react-icons/md";
 import { TypeAnimation } from 'react-type-animation';
@@ -18,26 +17,28 @@ export default function Profile() {
                     <div className="p-4 md:p-12 text-center lg:text-left">
                         <div className="block lg:hidden rounded-full mx-auto -mt-16 h-48 w-48 bg-cover bg-center hidden-profile-pic opacity-100"></div>
                         
-                        <h1 className="dark:text-white text-2xl md:text-3xl font-bold pt-8 lg:pt-0">Raden Mohamad Adrian</h1>
-                        <div className="mx-auto lg:mx-0 w-4/5 pt-3 border-b-2 border-green-500 opacity-25"></div>
-                        <p className="dark:text-white pt-4 text-base font-bold flex my-auto justify-center lg:justify-start gap-3">
-                            <FaBriefcase className="my-auto h-5 text-green-700 hidden md:block" />
-                            <TypeAnimation 
-                                sequence={[
-                                    'AI Engineer',
-                                    1000, 
-                                    'AI Engineer, Data Scientist',
-                                    1000, 
-                                    'AI Engineer, Data Scientist, Full-Stack Developer',
-                                    5000
-                                ]}
-                                wrapper="span"
-                                cursor={true}
-                                repeat={Infinity}
+                        <h1 className="dark:text-white text-3xl md:text-4xl font-bold pt-8 lg:pt-0 border-b-2 pb-3 border-green-500 border-opacity-25">Hello, I'm <span className="text-green-700">Adrian</span></h1>
+                        <div className="dark:text-white pt-4 text-xl font-semibold flex my-auto justify-center lg:justify-start gap-3">
+                            <div className="flex">
+                                <span >I'm&nbsp;</span>
+                                <TypeAnimation 
+                                    sequence={[
+                                        "an AI Engineer",
+                                        1000, 
+                                        "a Data Scientist",
+                                        1000, 
+                                        "a Full-Stack Developer",
+                                        1000
+                                    ]}
+                                    wrapper="span"
+                                    cursor={true}
+                                    repeat={Infinity}
 
+                                    className="text-green-700"
+                                />
+                            </div>
                             
-                            />
-                        </p>
+                        </div>
                         <p className="dark:text-white pt-8 text-xs md:text-sm">I am a 7th-semester Computer Science student at the University of Indonesia. I have a deep passion for Artificial Intelligence
             and Data Science. I also have strong skills in front-end and back-end development, mobile development, and have dabbled in
             cybersecurity.</p>

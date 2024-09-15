@@ -15,15 +15,14 @@ export default function AllProjects({ size, text }) {
       <h1 className="text-2xl font-bold">{text}</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center p-2">
         {displayedProjects.map((project) => (
-          <button onClick={()=>{navigate(`/projects/${project.id}`)}}>
-          <ProjectCard
-            key={project.id}
-            title={project.title}
-            imageFile={project.imageFile}
-            start={project.dateStart}
-            end={project.dateEnd}
-            techStacks={project.techStacks}
-          />
+          <button key={project.id} onClick={()=>{navigate(`/projects/${project.id}`)}}>
+            <ProjectCard
+              title={project.title}
+              imageFile={project.imageFile}
+              start={project.dateStart}
+              end={project.dateEnd}
+              techStacks={project.techStacks}
+            />
           </button>  
 
         ))}
@@ -35,7 +34,7 @@ export default function AllProjects({ size, text }) {
           className="m-auto flex items-center gap-2 border-2 hover:border-green-700 hover:text-green-700 border-primary p-2 text-primary rounded-md duration-300 w-fit"
         >
         <BsThreeDots />
-        View more
+        View More
         </button>
       )}
 

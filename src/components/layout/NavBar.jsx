@@ -88,7 +88,7 @@ const Navbar = ({onNavigate}) => {
         }
       >
         {/* Mobile Logo */}
-        <button onClick={() => onNavigate('/')}>
+        <button key="button" onClick={() => onNavigate('/')}>
           <h1 className='w-full text-3xl font-bold dark:text-[#00df9a] text-white m-4 flex gap-3'><GiSkullCrossedBones /></h1>
         </button>
         {/* Mobile Navigation Items */}
@@ -96,8 +96,8 @@ const Navbar = ({onNavigate}) => {
           <li
             key={item.id}
             onClick={() => onNavigate(item.path)}
-            className={`p-4 border-b rounded-xl hover:bg-black dark:hover:bg-[#00df9a] duration-300 hover:text-white dark:hover:text-black cursor-pointer border-gray-600
-              ${location.pathname === item.path && 'bg-black dark:bg-[#00df9a] text-white dark:text-black'}
+            className={`p-4 border-b rounded-xl hover:bg-black dark:hover:bg-[#00df9a] duration-300  hover:text-white dark:hover:text-black cursor-pointer border-gray-600
+              ${location.pathname === item.path ? 'bg-black dark:bg-[#00df9a] text-white dark:text-black' : 'text-white dark:text-primary'}
             `}
           >
             {item.text}

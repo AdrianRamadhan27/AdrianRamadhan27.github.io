@@ -51,7 +51,7 @@ export default function ProjectDetail({project}) {
             <div className="justify-center flex flex-col md:flex-row gap-3">
                 {
                     project.links.map((link) => (
-                        <a key={link.name} href={link.url} target="_blank" className="p-2 justify-between gap-2 flex items-center rounded-md bg-green-800 text-white hover:scale-105 duration-300 hover:bg-green-600">
+                        <a key={link.name} href={link.url} target="_blank" className="p-2 w-fit gap-2 mx-auto md:mx-0 flex items-center rounded-md bg-green-800 text-white hover:scale-105 duration-300 hover:bg-green-600">
                             {link.name} <FaExternalLinkAlt />
                         </a>
                     ))

@@ -2,7 +2,7 @@ const projectsData = [
     {
         id: 8,
         title: "Portfolio",
-        dateStart: "2024-08-01",
+        dateStart: "2024-09-01",
         dateEnd: "",
         techStacks: ["React.js", "Tailwind CSS", "LLaMa", "Github-pages"],
         description:
@@ -22,6 +22,7 @@ const projectsData = [
         description:
             "As part of a capstone project at Digistar Class, I worked inside a team of 5, with myself being the sole Front-End Developer. We were tasked to develop a use case based on Telkom's digital product OCA (Omni Communication Assistant). Our use case is a custom dashboard for OCA's ticketing service. I developed the Front-End of the website using React.js, Tailwind CSS, and Vite.",
         links: [
+            { name: "Pitch Deck", url: "https://www.canva.com/design/DAGQGYyLr18/VcI0dWTxkHCTUWORqVfOtg/view?utm_content=DAGQGYyLr18&utm_campaign=designshare&utm_medium=link&utm_source=editor" }, 
             { name: "View the Repository", url: "https://github.com/AdrianRamadhan27/digistar-27" }, 
             { name: "Visit the site", url: "https://digistar-27.vercel.app/analytics/" }, 
         ],
@@ -33,9 +34,9 @@ const projectsData = [
         title: "BRIBRAIN Letter Generator",
         dateStart: "2024-03-01",
         dateEnd: "2024-07-01",
-        techStacks: ["OpenAI", "LLaMa", "Mistral", "Gradio", "Unsloth"],
+        techStacks: ["GPT", "LLaMa", "Mistral", "Gradio", "Unsloth"],
         description:
-            "As a capstone research project at BRIBRAIN Academy, I was tasked to improve the existing LLM-powered Letter Generator at BRI. I fine-tuned open-source models LL M-7B andMMistral-7B) Gsing LoRA oU a dataset synthesized from actual letter generator inputs and outputs.",
+            "As a capstone research project at BRIBRAIN Academy, I was tasked to improve the existing LLM-powered Letter Generator at BRI. I fine-tuned open-source models LLaMa-7B and Mistral-7B using LoRA on a dataset synthesized from actual letter generator inputs and outputs.",
         links: [
             { name: "HuggingFace Space", url: "https://huggingface.co/spaces/raden-mohamad11/letter_generator_bribrain" }, 
         ],
@@ -87,10 +88,10 @@ const projectsData = [
         dateEnd: "2023-06-01",
         techStacks: ["SpringBoot", "Vue.js", "Postgres", "Supabase", "Tailwind CSS", "GCP", "Vercel", "Sonarqube"],
         description:
-            "For the 'Advanced Programming' course final project, I collaborated with 4 other students to develop a movie tracking website with features like movie reviews, progress tracking, and database moderation. I worked on the backend services, which used a microservices architecture and were deployed on GCP.",
+            "For the 'Advanced Programming' course final project, I collaborated with 4 other students to develop a movie tracking website with features like movie reviews, progress tracking, and database moderation. I worked on the backend services, which used a microservices architecture and were deployed on GCP. You can visit the front-end right now but the backend server is down.",
         links: [
             { name: "Documentation", url: "https://www.canva.com/design/DAFlCq-3y2w/aVDB6wNXesMqdtN3bRH40g/view?utm_content=DAFlCq-3y2w&utm_campaign=designshare&utm_medium=link&utm_source=editor" }, 
-            { name: "Visit the site (Backend is Down)", url: "https://adpro-b11.vercel.app/" }, 
+            { name: "Visit the site", url: "https://adpro-b11.vercel.app/" }, 
         ],
         imageFile: "tracko.png", 
         type: "Group",
@@ -102,7 +103,7 @@ const projectsData = [
         dateEnd: "2022-12-01",
         techStacks: ["django", "jQuery", "Flutter", "Postgres", "Tailwind CSS", "Railway",],
         description:
-            "As part of the 'Platform-Based Programming' course project, my team developed 'Mercatura', a platform for UMKM (micro-businesses). I worked on the UMKM data page, and we built the platform using Django with Tailwind CSS for styling and a mobile app with Flutter, using the Django-Rest API.",
+            "As part of the 'Platform-Based Programming' course project, my team developed 'Mercatura', a platform for UMKM (micro-businesses). I worked on the UMKM data page, and we built the platform using Django with Tailwind CSS for styling and a mobile app with Flutter, using the Django-Rest API. I still have the app apk on my phone but the website and server is down.",
         links: [
             { name: "Documentation", url: "https://www.canva.com/design/DAFUoB4A0TQ/aK6rI-LvT7oYvrAB7ysy9Q/view?utm_content=DAFUoB4A0TQ&utm_campaign=designshare&utm_medium=link&utm_source=editor" }, 
             { name: "Web Repository", url: "https://github.com/AdrianRamadhan27/mercatura" }, 
