@@ -66,7 +66,7 @@ export default function Profile() {
             </div>
             
             <div id="profilepic" className="w-full lg:w-2/5">
-                <img src={import.meta.env.BASE_URL+"images/profile.jpg"} className="transform transition duration-500 hover:scale-110 rounded-none lg:rounded-lg shadow-2xl hidden lg:block "/>
+                <img src={import.meta.env.BASE_URL+"images/profile2.jpg"} className="transform transition duration-500 hover:scale-110 rounded-none lg:rounded-lg shadow-2xl hidden lg:block "/>
             </div>
             {shown && <PDFViewer onClose={setShown}/>}
             
