@@ -1,9 +1,24 @@
 const projectsData = [
     {
+        id: 9,
+        title: "SuaraHati",
+        dateStart: "2025-08-01",
+        dateEnd: "2024-09-01",
+        techStacks: ["Next.js", "Tailwind CSS", "Groq", "Vercel", "Supabase"],
+        description:
+          "As the capstone project of IBM Code Generation Course, I built a therapy journal website that allows it's users to write journals and get AI analysis. Uses groqcloud model for the analyssi and chat feature. Deployed on Vercel.",
+        links: [
+          { name: "View the Repository", url: "https://github.com/AdrianRamadhan27/ibm-project" }, 
+          { name: "Visit the site", url: "https://suarahati.vercel.app/" }, 
+        ],
+        imageFile: "suarahati.png", 
+        type: "Individual",
+      },
+    {
         id: 8,
         title: "Portfolio",
         dateStart: "2024-09-01",
-        dateEnd: "",
+        dateEnd: "2024-12-01",
         techStacks: ["React.js", "Tailwind CSS", "LLaMa", "Github-pages"],
         description:
           "The website you're currently on. At the beginning, this was only an assignment from Digistar Class, but then I got to develop it even further for my own benefit. Uses groqcloud's LLaMa model for the chat feature. Built using React.js and Deployed on GitHub Pages.",
