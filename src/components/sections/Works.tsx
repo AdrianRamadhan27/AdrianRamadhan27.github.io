@@ -19,8 +19,14 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
   sourceCodeLink,
   liveLink,
 }) => {
+  // index * 0.5 as a per-card delay was fine for the template's original 3
+  // dummy projects (max 1s) -- with a real project list it scales unbounded
+  // (9 projects = a 4s delay before the last card even starts appearing),
+  // which reads as cards randomly "not showing up" if you don't wait the
+  // several seconds out. Capped so the stagger stays snappy regardless of
+  // how many projects exist.
   return (
-    <motion.div variants={fadeIn("up", "spring", index * 0.5, 0.75)}>
+    <motion.div variants={fadeIn("up", "spring", Math.min(index * 0.15, 1), 0.75)}>
       <Tilt
         glareEnable
         tiltEnable
