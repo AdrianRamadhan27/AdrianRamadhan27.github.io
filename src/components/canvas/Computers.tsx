@@ -5,6 +5,8 @@ import * as THREE from "three";
 
 import CanvasLoader from "../layout/Loader";
 import ScreenChat from "../chat/ScreenChat";
+import { useContent } from "../../hooks/useContent";
+import type { TChatPublicSettings } from "../../types";
 
 // GLTFLoader sanitizes the original "MY SCREEN" node name (spaces become
 // underscores), so we match loosely rather than depend on the exact string.
@@ -42,7 +44,7 @@ type ScreenAnchor = {
   height: number;
 };
 
-const Computers = () => {
+const Computers = ({ chatPublic }: { chatPublic: TChatPublicSettings }) => {
   const computer = useGLTF("./desktop_pc/scene.gltf");
   const { invalidate } = useThree();
   const [screen, setScreen] = useState<ScreenAnchor | null>(null);
@@ -114,7 +116,7 @@ const Computers = () => {
                 borderRadius: "4px",
               }}
             >
-              <ScreenChat />
+              <ScreenChat chatPublic={chatPublic} />
             </div>
           </Html>
         </group>
@@ -128,6 +130,10 @@ const Computers = () => {
 const MOBILE_BREAKPOINT_PX = 640;
 
 const ComputersCanvas = () => {
+  // Read here, not inside Computers/ScreenChat -- this component sits
+  // outside the Canvas in the normal React tree, so it's the right place
+  // to read context before threading it down as a plain prop.
+  const { chatPublic } = useContent();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -140,8 +146,10 @@ const ComputersCanvas = () => {
 
   if (isMobile) {
     return (
-      <div className="mx-auto mt-8 h-[70vh] max-h-[520px] w-full max-w-md overflow-hidden rounded-2xl border border-[#00df9a]/30 shadow-lg">
-        <ScreenChat compact />
+      <div className="mt-8 px-6">
+        <div className="mx-auto h-[70vh] max-h-[520px] w-full max-w-md overflow-hidden rounded-2xl border border-[#00df9a]/30 shadow-lg">
+          <ScreenChat compact chatPublic={chatPublic} />
+        </div>
       </div>
     );
   }
@@ -161,7 +169,7 @@ const ComputersCanvas = () => {
           maxPolarAngle={Math.PI / 2}
           minPolarAngle={Math.PI / 2}
         />
-        <Computers />
+        <Computers chatPublic={chatPublic} />
       </Suspense>
       <Preload all />
     </Canvas>

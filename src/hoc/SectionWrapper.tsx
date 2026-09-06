@@ -22,8 +22,6 @@ const SectionWrapper = (
         className={`${styles.padding} relative z-0 mx-auto max-w-7xl`}
         id={idName || FALLBACK_ID}
       >
-        <span className="hash-span">&nbsp;</span>
-
         <Component />
       </motion.section>
     );

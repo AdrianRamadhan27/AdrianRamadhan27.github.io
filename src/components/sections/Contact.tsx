@@ -73,7 +73,7 @@ const Contact = () => {
     >
       <motion.div
         variants={slideIn("left", "tween", 0.2, 1)}
-        className="bg-black-100 flex-[0.75] rounded-2xl p-8"
+        className="bg-black-100 flex-[1.4] rounded-2xl p-8"
       >
         <Header useMotion={false} {...config.contact} />
 
@@ -114,7 +114,7 @@ const Contact = () => {
 
       <motion.div
         variants={slideIn("right", "tween", 0.2, 1)}
-        className="h-[350px] md:h-[550px] xl:h-auto xl:flex-1"
+        className="h-[340px] md:h-[460px] xl:h-auto xl:flex-[0.6]"
       >
         <EarthCanvas />
       </motion.div>

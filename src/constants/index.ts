@@ -67,7 +67,7 @@ const services: TService[] = [
     icon: mobile,
   },
   {
-    title: "Backend Developer",
+    title: "Forward Deployed Engineer",
     icon: backend,
   },
   {

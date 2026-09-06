@@ -1,13 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 
-import { useContent } from "../../hooks/useContent";
 import { streamChat, type ChatMessage } from "../../lib/chatClient";
+import type { TChatPublicSettings } from "../../types";
 
 // Shared chat UI: mounted both projected onto the 3D monitor (desktop) and
 // as a full-width fallback panel (mobile, where the 3D canvas doesn't render
 // at all). Deliberately dependency-free markup so it looks right at any size.
-const ScreenChat = ({ compact = false }: { compact?: boolean }) => {
-  const { chatPublic } = useContent();
+//
+// chatPublic is passed in as a prop rather than read via useContent() here
+// because the desktop instance is mounted inside drei's <Html>, which
+// renders its children into a wholly separate ReactDOM.createRoot() (not a
+// portal) -- React context from the surrounding app, including
+// ContentContext, never reaches it. The caller (ComputersCanvas) reads
+// useContent() itself and threads the value down as a plain prop instead.
+const ScreenChat = ({
+  compact = false,
+  chatPublic,
+}: {
+  compact?: boolean;
+  chatPublic: TChatPublicSettings;
+}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);

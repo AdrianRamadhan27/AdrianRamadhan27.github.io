@@ -11,8 +11,13 @@ const Hero = () => {
   const { profile } = useContent();
   const [cvOpen, setCvOpen] = useState(false);
 
+  // min-h-screen alone lets mobile content (text + stacked chat panel) grow
+  // taller than one viewport, but r3f's Canvas sizes itself via CSS
+  // height:100%, which needs a *definite* parent height -- min-height
+  // doesn't count, so at sm+ (where the canvas actually renders) this
+  // reverts to a fixed h-screen or the canvas collapses/mispositions.
   return (
-    <section className={`relative mx-auto min-h-screen w-full`}>
+    <section className={`relative mx-auto min-h-screen w-full sm:h-screen`}>
       {/* Below the sm breakpoint there is no 3D canvas at all (see
           ComputersCanvas) -- just a normal-flow chat panel underneath, so
           this block is normal-flow too (pt-28 clears the fixed navbar) and
