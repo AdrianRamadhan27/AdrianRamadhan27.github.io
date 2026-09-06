@@ -8,11 +8,20 @@ export async function streamChat(
   onDelta: (chunk: string) => void
 ): Promise<void> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  if (!supabaseUrl) throw new Error("Supabase is not configured.");
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) throw new Error("Supabase is not configured.");
 
+  // Supabase Edge Functions require a valid Authorization header by default
+  // (JWT verification is on unless a function explicitly opts out), even
+  // for a function meant to be fully public. The anon key is a valid JWT
+  // and is designed to be public, so it satisfies that check here.
   const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${anonKey}`,
+      apikey: anonKey,
+    },
     body: JSON.stringify({ messages: history }),
   });
 

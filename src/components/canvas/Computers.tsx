@@ -5,7 +5,6 @@ import * as THREE from "three";
 
 import CanvasLoader from "../layout/Loader";
 import ScreenChat from "../chat/ScreenChat";
-import PhotoCard from "./PhotoCard";
 
 // GLTFLoader sanitizes the original "MY SCREEN" node name (spaces become
 // underscores), so we match loosely rather than depend on the exact string.
@@ -163,7 +162,6 @@ const ComputersCanvas = () => {
           minPolarAngle={Math.PI / 2}
         />
         <Computers />
-        <PhotoCard />
       </Suspense>
       <Preload all />
     </Canvas>

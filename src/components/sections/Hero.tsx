@@ -12,14 +12,17 @@ const Hero = () => {
   const [cvOpen, setCvOpen] = useState(false);
 
   return (
-    <section className={`relative mx-auto h-screen w-full`}>
-      {/* This box spans the full hero height (inset-0), but only its top
-          slice actually has content -- pointer-events-none lets clicks
-          everywhere else fall through to the Canvas below for OrbitControls
-          dragging. The CV button opts back in with pointer-events-auto so
-          it alone stays clickable (z-10 keeps it visually on top too). */}
+    <section className={`relative mx-auto min-h-screen w-full`}>
+      {/* Below the sm breakpoint there is no 3D canvas at all (see
+          ComputersCanvas) -- just a normal-flow chat panel underneath, so
+          this block is normal-flow too (pt-28 clears the fixed navbar) and
+          stacks cleanly above it. At sm+ it switches to absolute+inset-0,
+          overlaying the canvas -- pointer-events-none there lets clicks
+          everywhere but the CV button fall through for OrbitControls
+          dragging (z-10 keeps it visually on top; the button opts back in
+          with pointer-events-auto). */}
       <div
-        className={`pointer-events-none absolute inset-0 top-[120px] z-10 mx-auto max-w-7xl ${styles.paddingX} flex flex-row items-start gap-5`}
+        className={`relative z-10 mx-auto max-w-7xl pb-8 pt-28 sm:pointer-events-none sm:absolute sm:inset-0 sm:top-[120px] sm:pb-0 sm:pt-0 ${styles.paddingX} flex flex-row items-start gap-5`}
       >
         <div className="mt-5 flex flex-col items-center justify-center">
           <div className="bg-accent h-5 w-5 rounded-full" />
@@ -54,7 +57,7 @@ const Hero = () => {
 
       <ComputersCanvas />
 
-      <div className="xs:bottom-10 absolute bottom-32 flex w-full items-center justify-center">
+      <div className="xs:bottom-10 absolute bottom-32 hidden w-full items-center justify-center sm:flex">
         <a
           href="#about"
           onClick={(e) => {

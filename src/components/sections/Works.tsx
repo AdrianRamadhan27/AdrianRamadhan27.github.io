@@ -1,5 +1,6 @@
 import Tilt from "react-parallax-tilt";
 import { motion } from "framer-motion";
+import { FiExternalLink } from "react-icons/fi";
 
 import { github } from "../../assets";
 import { SectionWrapper } from "../../hoc";
@@ -16,6 +17,7 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
   tags,
   image,
   sourceCodeLink,
+  liveLink,
 }) => {
   return (
     <motion.div variants={fadeIn("up", "spring", index * 0.5, 0.75)}>
@@ -33,9 +35,19 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
               alt={name}
               className="h-full w-full rounded-2xl object-cover"
             />
-            <div className="absolute inset-0 m-3 flex justify-end opacity-0 transition-opacity duration-300 hover:opacity-100">
+            <div className="absolute inset-0 m-3 flex justify-end gap-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
+              {liveLink && (
+                <div
+                  onClick={() => window.open(liveLink, "_blank")}
+                  title="Live demo"
+                  className="black-gradient flex h-10 w-10 cursor-pointer items-center justify-center rounded-full"
+                >
+                  <FiExternalLink className="h-1/2 w-1/2 text-white" />
+                </div>
+              )}
               <div
                 onClick={() => window.open(sourceCodeLink, "_blank")}
+                title="Source code"
                 className="black-gradient flex h-10 w-10 cursor-pointer items-center justify-center rounded-full"
               >
                 <img

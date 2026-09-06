@@ -81,6 +81,23 @@ async function loadTable<TRow, TMapped>(
   }
 }
 
+// Same resilience as loadTable, but for a single-row query. Every entry in
+// the Promise.all below MUST resolve rather than reject -- otherwise one
+// flaky endpoint (a cold-starting free-tier project, a transient network
+// blip) takes the whole Promise.all down with it, silently discarding
+// results the OTHER queries already fetched successfully.
+async function loadSingle<TRow>(
+  query: PromiseLike<{ data: TRow | null; error: unknown }>
+): Promise<TRow | null> {
+  try {
+    const { data, error } = await query;
+    if (error) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -104,8 +121,8 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      const [profileRes, exp, proj, tech, soc, chatRes] = await Promise.all([
-        supabase.from("profile").select("*").maybeSingle(),
+      const [profileRow, exp, proj, tech, soc, chatRow] = await Promise.all([
+        loadSingle(supabase.from("profile").select("*").maybeSingle()),
         loadTable<any, TExperience>(
           "experiences",
           (row) => ({
@@ -152,16 +169,18 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
           }),
           defaultSocials
         ),
-        supabase
-          .from("chat_settings_public")
-          .select("enabled, greeting, model")
-          .maybeSingle(),
+        loadSingle(
+          supabase
+            .from("chat_settings_public")
+            .select("enabled, greeting, model")
+            .maybeSingle()
+        ),
       ]);
 
       if (cancelled) return;
 
-      if (profileRes.data) {
-        const row = profileRes.data as any;
+      if (profileRow) {
+        const row = profileRow as any;
         setProfile({
           fullName: row.full_name ?? defaultProfile.fullName,
           headline: row.headline ?? defaultProfile.headline,
@@ -178,8 +197,8 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
       setTechnologies(tech);
       setSocials(soc);
 
-      if (chatRes.data) {
-        const row = chatRes.data as any;
+      if (chatRow) {
+        const row = chatRow as any;
         setChatPublic({
           enabled: !!row.enabled,
           greeting: row.greeting ?? defaultChatPublic.greeting,

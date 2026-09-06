@@ -1,9 +1,4 @@
-import {
-  EarthCanvas,
-  BallCanvas,
-  ComputersCanvas,
-  StarsCanvas,
-} from "./canvas";
+import { EarthCanvas, ComputersCanvas, StarsCanvas } from "./canvas";
 import Hero from "./sections/Hero";
 import Navbar from "./layout/Navbar";
 import Footer from "./layout/Footer";
@@ -25,7 +20,6 @@ export {
   Contact,
   CanvasLoader,
   EarthCanvas,
-  BallCanvas,
   ComputersCanvas,
   StarsCanvas,
 };

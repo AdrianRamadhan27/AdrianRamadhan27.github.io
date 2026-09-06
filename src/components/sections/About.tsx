@@ -48,19 +48,19 @@ const Portrait = ({ src }: { src: string }) => (
   <Tilt
     glareEnable
     tiltEnable
-    tiltMaxAngleX={12}
-    tiltMaxAngleY={12}
+    tiltMaxAngleX={8}
+    tiltMaxAngleY={8}
     glareColor="#00df9a"
-    className="mx-auto w-full max-w-[280px] shrink-0 md:mx-0"
+    className="mx-auto h-[380px] w-full max-w-[280px] shrink-0 md:mx-0 md:h-auto md:w-2/5 md:max-w-none md:self-stretch"
   >
     <motion.div
       variants={fadeIn("left", "spring", 0.1, 0.9)}
-      className="green-pink-gradient shadow-card rounded-[24px] p-[3px]"
+      className="green-pink-gradient shadow-card h-full rounded-[24px] p-[3px]"
     >
       <img
         src={src}
         alt="Portrait"
-        className="aspect-[3/4] w-full rounded-[22px] object-cover"
+        className="h-full w-full rounded-[22px] object-cover"
         style={{ filter: "grayscale(0.3) contrast(1.05) saturate(1.15)" }}
       />
     </motion.div>
@@ -74,7 +74,7 @@ const About = () => {
     <>
       <Header useMotion={true} {...config.sections.about} />
 
-      <div className="mt-8 flex flex-col-reverse gap-10 md:flex-row md:items-start">
+      <div className="mt-8 flex flex-col-reverse gap-10 md:flex-row md:items-stretch">
         <div className="flex-1">
           <motion.p
             variants={fadeIn("", "", 0.1, 1)}
