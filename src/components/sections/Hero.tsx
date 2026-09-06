@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 
 import { styles } from "../../constants/styles";
 import { ComputersCanvas } from "../canvas";
 import { useContent } from "../../hooks/useContent";
 import { scrollToSection } from "../../utils/scrollToSection";
+import CvModal from "../ui/CvModal";
 
 const Hero = () => {
   const { profile } = useContent();
+  const [cvOpen, setCvOpen] = useState(false);
 
   return (
     <section className={`relative mx-auto h-screen w-full`}>
@@ -40,14 +42,12 @@ const Hero = () => {
           </p>
 
           {profile.cvUrl && (
-            <a
-              href={profile.cvUrl}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              onClick={() => setCvOpen(true)}
               className="bg-accent hover:bg-accent-dim pointer-events-auto mt-6 inline-block rounded-full px-6 py-3 text-[14px] font-bold text-black transition-colors"
             >
               View CV
-            </a>
+            </button>
           )}
         </div>
       </div>
@@ -77,6 +77,9 @@ const Hero = () => {
           </div>
         </a>
       </div>
+      {cvOpen && profile.cvUrl && (
+        <CvModal url={profile.cvUrl} onClose={() => setCvOpen(false)} />
+      )}
     </section>
   );
 };

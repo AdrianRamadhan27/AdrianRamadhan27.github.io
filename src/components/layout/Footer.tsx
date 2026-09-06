@@ -67,9 +67,8 @@ const Footer = () => {
 
         {profile.cvUrl && (
           <a
-            href={profile.cvUrl}
-            target="_blank"
-            rel="noreferrer"
+            href={`${profile.cvUrl}?download`}
+            download
             className="border-accent text-accent hover:bg-accent rounded-lg border px-5 py-2 text-[14px] font-semibold transition-colors hover:text-black"
           >
             Download CV

@@ -60,11 +60,28 @@ const ProfileEditor = () => {
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase
+    // .select().maybeSingle() so an RLS-blocked write (0 rows, e.g. an
+    // expired session) surfaces as a real error instead of a false "Saved."
+    const { data: updated, error } = await supabase
       .from("profile")
-      .upsert({ id: 1, ...payload }, { onConflict: "id" });
+      .upsert({ id: 1, ...payload }, { onConflict: "id" })
+      .select()
+      .maybeSingle();
 
     setSaving(false);
+
+    if (!error && !updated) {
+      setStatus(
+        "Error: save did not persist (0 rows updated) -- try logging out and back into the CMS."
+      );
+      return;
+    }
+
+    if (updated) {
+      setRow(updated as ProfileRow);
+      setHeroLinesText(((updated as ProfileRow).hero_lines ?? []).join("\n"));
+    }
+
     setStatus(error ? `Error: ${error.message}` : "Saved.");
   };
 

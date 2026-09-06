@@ -58,10 +58,26 @@ const ChatbotEditor = () => {
     setSaving(true);
     setStatus(null);
 
-    const { error } = await supabase
+    // .select().maybeSingle() so a write silently blocked by RLS (0 rows
+    // affected -- e.g. an expired session) surfaces as a real error instead
+    // of a false "Saved." (a bare .update() with no .select() returns no
+    // error at all when RLS filters out every row).
+    const { data: updated, error } = await supabase
       .from("chat_settings")
       .update({ ...settings, updated_at: new Date().toISOString() })
-      .eq("id", 1);
+      .eq("id", 1)
+      .select()
+      .maybeSingle();
+
+    if (!error && !updated) {
+      setSaving(false);
+      setStatus(
+        "Error: save did not persist (0 rows updated) -- try logging out and back into the CMS."
+      );
+      return;
+    }
+
+    if (updated) setSettings(updated as SettingsRow);
 
     if (apiKeyInput.trim()) {
       const { data: sessionData } = await supabase.auth.getSession();
