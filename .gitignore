@@ -24,3 +24,11 @@ dist-ssr
 *.sw?
 
 .env
+.env.seed
+
+# One-time seed images (recovered from the old site) and the local key
+# needed to upload them -- not part of the deployed app.
+supabase/seed-assets
+
+# Supabase CLI local state (project ref, pooler URL) -- not app config
+supabase/.temp

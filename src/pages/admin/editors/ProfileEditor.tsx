@@ -69,13 +69,29 @@ const ProfileEditor = () => {
   };
 
   const handlePhotoUpload = async (file: File) => {
-    const path = await uploadAsset("photo", file);
-    setRow((r) => ({ ...r, photo_path: path }));
+    setStatus("Uploading photo…");
+    try {
+      const path = await uploadAsset("photo", file);
+      setRow((r) => ({ ...r, photo_path: path }));
+      setStatus("Photo uploaded — click Save to keep it.");
+    } catch (e) {
+      setStatus(
+        `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
+      );
+    }
   };
 
   const handleCvUpload = async (file: File) => {
-    const path = await uploadAsset("cv", file, { resize: false });
-    setRow((r) => ({ ...r, cv_path: path }));
+    setStatus("Uploading CV…");
+    try {
+      const path = await uploadAsset("cv", file, { resize: false });
+      setRow((r) => ({ ...r, cv_path: path }));
+      setStatus("CV uploaded — click Save to keep it.");
+    } catch (e) {
+      setStatus(
+        `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
+      );
+    }
   };
 
   if (loading) return <p className="text-secondary">Loading…</p>;

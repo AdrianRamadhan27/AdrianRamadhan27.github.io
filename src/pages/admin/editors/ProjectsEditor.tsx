@@ -53,6 +53,7 @@ const ProjectsEditor = () => {
   const [tagsText, setTagsText] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const load = async () => {
     if (!supabase) return;
@@ -121,8 +122,16 @@ const ProjectsEditor = () => {
   };
 
   const handleImageUpload = async (id: string, file: File) => {
-    const path = await uploadAsset("projects", file);
-    updateRow(id, { image_path: path });
+    setStatus("Uploading image…");
+    try {
+      const path = await uploadAsset("projects", file);
+      updateRow(id, { image_path: path });
+      setStatus("Image uploaded — click Save to keep it.");
+    } catch (e) {
+      setStatus(
+        `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
+      );
+    }
   };
 
   if (loading) return <p className="text-secondary">Loading…</p>;
@@ -135,6 +144,8 @@ const ProjectsEditor = () => {
           + Add project
         </button>
       </div>
+
+      {status && <p className="text-secondary mb-4 text-[13px]">{status}</p>}
 
       {rows.map((row, index) => (
         <div key={row.id} className={cardClass}>
