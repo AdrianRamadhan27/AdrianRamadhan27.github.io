@@ -23,7 +23,7 @@ const BALL_SCALE = 1.7;
 const MAX_COLUMNS = 6;
 // Vertical headroom for one row: ball diameter, <Float>'s idle bob, and the
 // name label below it.
-const ROW_HEIGHT = 220;
+const ROW_HEIGHT = 180;
 // Fraction of the fitted frustum actually used -- leaves a small margin so
 // nothing sits flush against the canvas edge.
 const FIT_MARGIN = 0.88;

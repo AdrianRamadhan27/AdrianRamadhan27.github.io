@@ -100,26 +100,56 @@ const Computers = ({ chatPublic }: { chatPublic: TChatPublicSettings }) => {
       <primitive
         object={computer.scene}
         scale={0.75}
-        position={[0, -4.25, -1.5]}
+        position={[0, -3.2, -1.5]}
         rotation={[-0.01, -0.2, -0.1]}
       />
 
       {screen && (
-        <group position={screen.position} quaternion={screen.quaternion}>
-          <Html transform occlude scale={SCREEN_HTML_SCALE} zIndexRange={[10, 0]}>
-            <div
-              style={{
-                width: `${SCREEN_CSS_WIDTH}px`,
-                height: `${SCREEN_CSS_WIDTH / (screen.width / screen.height)}px`,
-                transform: FLIP_SCREEN_CONTENT ? "scaleX(-1)" : undefined,
-                overflow: "hidden",
-                borderRadius: "4px",
-              }}
-            >
-              <ScreenChat chatPublic={chatPublic} />
-            </div>
-          </Html>
-        </group>
+        <>
+          {/* The original template's bright, self-illuminated VS Code
+              screenshot doubled as the scene's key light on the desk --
+              emissive materials don't actually cast light onto neighboring
+              geometry, but a very bright surface still reads as one. We
+              deliberately dimmed the screen to make room for the chat UI,
+              which took that glow with it. A spotlight aimed outward from
+              the screen would look more like a real monitor's glow, but
+              neither the screen node's own quaternion nor the fixed camera
+              direction turned out to be a reliable "outward" direction for
+              this particular (mirrored, oddly-composed) GLTF node -- both
+              landed the cone somewhere not visibly hitting the desk when
+              tested at extreme intensity. A point light colocated with the
+              screen is proven to reach the desk (omnidirectional, so it
+              doesn't depend on getting a direction right) and, positioned
+              this close, still concentrates its visible falloff tightly
+              around the monitor -- reading as the screen itself glowing. */}
+          <pointLight
+            position={screen.position}
+            color="#00df9a"
+            intensity={35}
+            distance={14}
+            decay={1.6}
+          />
+          <group position={screen.position} quaternion={screen.quaternion}>
+            {/* occlude (raycast) off deliberately: we always want the chat
+                showing here regardless of viewing angle, and it's a fragile
+                check anyway -- it misfired after nudging the model's position
+                by about a unit, hiding the whole overlay because it decided
+                (incorrectly) something else in the model was in front of it. */}
+            <Html transform scale={SCREEN_HTML_SCALE} zIndexRange={[10, 0]}>
+              <div
+                style={{
+                  width: `${SCREEN_CSS_WIDTH}px`,
+                  height: `${SCREEN_CSS_WIDTH / (screen.width / screen.height)}px`,
+                  transform: FLIP_SCREEN_CONTENT ? "scaleX(-1)" : undefined,
+                  overflow: "hidden",
+                  borderRadius: "4px",
+                }}
+              >
+                <ScreenChat chatPublic={chatPublic} />
+              </div>
+            </Html>
+          </group>
+        </>
       )}
     </mesh>
   );

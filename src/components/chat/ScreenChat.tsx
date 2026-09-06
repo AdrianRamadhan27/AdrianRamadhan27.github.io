@@ -89,7 +89,12 @@ const ScreenChat = ({
         }`}
       >
         {messages.map((m, i) => (
-          <p key={i} className="whitespace-pre-wrap break-words">
+          <p
+            key={i}
+            className={`whitespace-pre-wrap break-words ${
+              m.role === "user" ? "text-white" : "text-[#00df9a]"
+            }`}
+          >
             <span className="opacity-60">{m.role === "user" ? "> " : "$ "}</span>
             {m.content}
             {busy && i === messages.length - 1 && m.role === "assistant" && (
@@ -110,7 +115,7 @@ const ScreenChat = ({
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Type a message…"
           disabled={busy}
-          className={`flex-1 bg-transparent outline-none placeholder:text-[#00df9a]/40 ${
+          className={`flex-1 bg-transparent text-white outline-none placeholder:text-[#00df9a]/40 ${
             compact ? "text-[13px]" : "text-[11px]"
           }`}
         />

@@ -36,7 +36,7 @@ const Tech = () => {
     <>
       <Header useMotion={true} {...config.sections.skills} />
 
-      <div className="mt-16 flex flex-col gap-12">
+      <div className="mt-16 flex flex-col gap-2">
         {groups.map((group) => (
           <div key={group.category}>
             <h3 className="mb-2 text-[18px] font-bold text-white">
