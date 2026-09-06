@@ -37,6 +37,7 @@ const ExperienceEditor = () => {
   const [pointsText, setPointsText] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const load = async () => {
     if (!supabase) return;
@@ -116,8 +117,16 @@ const ExperienceEditor = () => {
   };
 
   const handleIconUpload = async (id: string, file: File) => {
-    const path = await uploadAsset("companies", file);
-    updateRow(id, { icon_path: path });
+    setStatus("Uploading icon…");
+    try {
+      const path = await uploadAsset("companies", file);
+      updateRow(id, { icon_path: path });
+      setStatus("Icon uploaded — click Save to keep it.");
+    } catch (e) {
+      setStatus(
+        `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
+      );
+    }
   };
 
   if (loading) return <p className="text-secondary">Loading…</p>;
@@ -130,6 +139,8 @@ const ExperienceEditor = () => {
           + Add entry
         </button>
       </div>
+
+      {status && <p className="text-secondary mb-4 text-[13px]">{status}</p>}
 
       {rows.map((row, index) => (
         <div key={row.id} className={cardClass}>

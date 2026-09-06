@@ -28,9 +28,11 @@ to the bundled default content in `src/constants/`.
 2. **Authentication → Providers → Email → turn OFF "Allow new users to sign
    up."** Do this before anything else — it's what keeps the CMS single-user.
 3. **Authentication → Users → Add user** — create your own login manually.
-4. **SQL Editor** → paste and run `supabase/schema.sql`.
-5. **Storage** → create a bucket named `public-assets`, public read.
-6. Install the Supabase CLI, then from the repo root:
+4. **SQL Editor** → paste and run `supabase/schema.sql`, then
+   `supabase/storage-policies.sql` (creates the `public-assets` bucket and
+   the read/write policies on it — a bucket's "public" toggle alone only
+   covers reads, uploads from the CMS need the write policies too).
+5. Install the Supabase CLI, then from the repo root:
    ```bash
    supabase login
    supabase link --project-ref <your-project-ref>
@@ -38,9 +40,25 @@ to the bundled default content in `src/constants/`.
    supabase functions deploy models
    supabase functions deploy save-chat-key
    ```
-7. Project Settings → API → copy the Project URL and `anon public` key into
+6. Project Settings → API → copy the Project URL and `anon public` key into
    `.env` (and into the `SUPABASE_URL` / `SUPABASE_ANON_KEY` GitHub Actions
    secrets for deployment).
+
+## Seeding real content
+
+`supabase/seed.sql` has the real profile/experience/projects/skills/socials
+content recovered from the old site (run it once in the SQL Editor, after
+`schema.sql`). It doesn't include images or the CV — the old site never had
+a CV file in the repo (it used a Google Drive embed), and the old skill
+icons were code components, not standalone image files.
+
+`supabase/seed-assets/` (gitignored) has the recovered project screenshots
+and profile photo; `npm run seed:assets` uploads them to Storage and points
+the matching rows at them. It needs your Supabase **service_role** key
+(dashboard → Project Settings → API), which bypasses RLS — put it in a local
+`.env.seed` (gitignored, see the comment at the top of
+`scripts/seed-assets.mjs`), never in `.env` or a commit. Upload your actual
+CV and any per-skill icons afterward from the CMS itself.
 
 ## Editing content
 

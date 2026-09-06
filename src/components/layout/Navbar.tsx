@@ -5,12 +5,23 @@ import { styles } from "../../constants/styles";
 import { navLinks } from "../../constants";
 import { logo, menu, close } from "../../assets";
 import { useContent } from "../../hooks/useContent";
+import { scrollToSection } from "../../utils/scrollToSection";
 
 const Navbar = () => {
   const { profile } = useContent();
   const [active, setActive] = useState<string | null>();
   const [toggle, setToggle] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    id: string
+  ) => {
+    e.preventDefault();
+    scrollToSection(id);
+    setActive(id);
+    setToggle(false);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -79,7 +90,9 @@ const Navbar = () => {
                 active === nav.id ? "text-white" : "text-secondary"
               } cursor-pointer text-[18px] font-medium hover:text-white`}
             >
-              <a href={`#${nav.id}`}>{nav.title}</a>
+              <a href={`#${nav.id}`} onClick={(e) => handleNavClick(e, nav.id)}>
+                {nav.title}
+              </a>
             </li>
           ))}
         </ul>
@@ -104,11 +117,10 @@ const Navbar = () => {
                   className={`font-poppins cursor-pointer text-[16px] font-medium ${
                     active === nav.id ? "text-white" : "text-secondary"
                   }`}
-                  onClick={() => {
-                    setToggle(!toggle);
-                  }}
                 >
-                  <a href={`#${nav.id}`}>{nav.title}</a>
+                  <a href={`#${nav.id}`} onClick={(e) => handleNavClick(e, nav.id)}>
+                    {nav.title}
+                  </a>
                 </li>
               ))}
             </ul>

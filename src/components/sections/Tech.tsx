@@ -7,10 +7,18 @@ const Tech = () => {
 
   return (
     <>
-      <div className="flex flex-row flex-wrap justify-center gap-10">
+      <div className="flex flex-row flex-wrap justify-center gap-x-10 gap-y-4">
         {technologies.map((technology, index) => (
-          <div className="h-28 w-28" key={technology.id ?? index}>
-            <BallCanvas icon={technology.icon} />
+          <div
+            className="flex w-28 flex-col items-center"
+            key={technology.id ?? index}
+          >
+            <div className="h-28 w-28">
+              <BallCanvas icon={technology.icon} />
+            </div>
+            <p className="text-secondary mt-1 text-center text-[13px]">
+              {technology.name}
+            </p>
           </div>
         ))}
       </div>

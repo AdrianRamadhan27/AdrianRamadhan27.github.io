@@ -30,6 +30,7 @@ const SkillsEditor = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const load = async () => {
     if (!supabase) return;
@@ -90,8 +91,16 @@ const SkillsEditor = () => {
   };
 
   const handleIconUpload = async (id: string, file: File) => {
-    const path = await uploadAsset("skills", file);
-    updateRow(id, { icon_path: path });
+    setStatus("Uploading icon…");
+    try {
+      const path = await uploadAsset("skills", file);
+      updateRow(id, { icon_path: path });
+      setStatus("Icon uploaded — click Save to keep it.");
+    } catch (e) {
+      setStatus(
+        `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
+      );
+    }
   };
 
   if (loading) return <p className="text-secondary">Loading…</p>;
@@ -104,6 +113,8 @@ const SkillsEditor = () => {
           + Add skill
         </button>
       </div>
+
+      {status && <p className="text-secondary mb-4 text-[13px]">{status}</p>}
 
       {rows.map((row, index) => (
         <div key={row.id} className={`${cardClass} flex items-start gap-4`}>
