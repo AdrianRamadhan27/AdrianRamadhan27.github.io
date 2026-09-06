@@ -39,7 +39,7 @@ const Tech = () => {
       <div className="mt-16 flex flex-col gap-2">
         {groups.map((group) => (
           <div key={group.category}>
-            <h3 className="mb-2 text-[18px] font-bold text-white">
+            <h3 className="text-center text-[18px] font-bold text-white">
               {group.category}
             </h3>
             <TechBallsRow technologies={group.items} />

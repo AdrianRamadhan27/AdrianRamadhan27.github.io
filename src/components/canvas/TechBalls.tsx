@@ -38,9 +38,11 @@ const FIT_MARGIN = 0.88;
 const FitOrthoCamera = ({
   halfWidth,
   halfHeight,
+  centerY,
 }: {
   halfWidth: number;
   halfHeight: number;
+  centerY: number;
 }) => {
   const { camera, size } = useThree();
 
@@ -61,14 +63,14 @@ const FitOrthoCamera = ({
 
     cam.left = -hw;
     cam.right = hw;
-    cam.top = hh;
-    cam.bottom = -hh;
+    cam.top = centerY + hh;
+    cam.bottom = centerY - hh;
     cam.near = 0.1;
     cam.far = 100;
-    cam.position.set(0, 0, 10);
-    cam.lookAt(0, 0, 0);
+    cam.position.set(0, centerY, 10);
+    cam.lookAt(0, centerY, 0);
     cam.updateProjectionMatrix();
-  }, [camera, size, halfWidth, halfHeight]);
+  }, [camera, size, halfWidth, halfHeight, centerY]);
 
   return null;
 };
@@ -168,11 +170,18 @@ const TechBallsRow = ({ technologies }: { technologies: TTechnology[] }) => {
     [technologies, columns, rowCount]
   );
 
-  // Content bounds: half-extent of the ball grid, plus the label sitting
-  // below each ball and the idle float bob, so the fit camera above
-  // accounts for everything that's actually drawn, not just ball centers.
+  // Content bounds. The label sits *below* each ball with nothing balancing
+  // it above, so treating the grid as vertically symmetric (as if halfHeight
+  // applied evenly on both sides) wastes that same amount of empty space
+  // above the balls too -- which is exactly the "gap under the heading"
+  // this was tuned to close. Computing the true top/bottom extent and
+  // centering the frustum on their midpoint (via centerY) removes it.
   const halfWidth = ((columns - 1) * SPACING) / 2 + BALL_SCALE + 0.4;
-  const halfHeight = ((rowCount - 1) * SPACING) / 2 + BALL_SCALE + 1.3;
+  const rowsHalfSpan = ((rowCount - 1) * SPACING) / 2;
+  const topExtent = rowsHalfSpan + BALL_SCALE;
+  const bottomExtent = rowsHalfSpan + BALL_SCALE + 0.6 + 0.3; // label anchor offset + approx label height
+  const halfHeight = (topExtent + bottomExtent) / 2;
+  const centerY = (topExtent - bottomExtent) / 2;
 
   const height = ROW_HEIGHT * rowCount;
 
@@ -190,7 +199,7 @@ const TechBallsRow = ({ technologies }: { technologies: TTechnology[] }) => {
         dpr={[1, 2]}
         gl={{ preserveDrawingBuffer: true }}
       >
-        <FitOrthoCamera halfWidth={halfWidth} halfHeight={halfHeight} />
+        <FitOrthoCamera halfWidth={halfWidth} halfHeight={halfHeight} centerY={centerY} />
         <Suspense fallback={<CanvasLoader />}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[0, 0, 5]} intensity={0.8} />
