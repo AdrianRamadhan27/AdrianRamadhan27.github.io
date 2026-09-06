@@ -11,8 +11,13 @@ const Hero = () => {
 
   return (
     <section className={`relative mx-auto h-screen w-full`}>
+      {/* This box spans the full hero height (inset-0), but only its top
+          slice actually has content -- pointer-events-none lets clicks
+          everywhere else fall through to the Canvas below for OrbitControls
+          dragging. The CV button opts back in with pointer-events-auto so
+          it alone stays clickable (z-10 keeps it visually on top too). */}
       <div
-        className={`absolute inset-0 top-[120px] mx-auto max-w-7xl ${styles.paddingX} flex flex-row items-start gap-5`}
+        className={`pointer-events-none absolute inset-0 top-[120px] z-10 mx-auto max-w-7xl ${styles.paddingX} flex flex-row items-start gap-5`}
       >
         <div className="mt-5 flex flex-col items-center justify-center">
           <div className="bg-accent h-5 w-5 rounded-full" />
@@ -39,7 +44,7 @@ const Hero = () => {
               href={profile.cvUrl}
               target="_blank"
               rel="noreferrer"
-              className="bg-accent hover:bg-accent-dim mt-6 inline-block rounded-full px-6 py-3 text-[14px] font-bold text-black transition-colors"
+              className="bg-accent hover:bg-accent-dim pointer-events-auto mt-6 inline-block rounded-full px-6 py-3 text-[14px] font-bold text-black transition-colors"
             >
               View CV
             </a>

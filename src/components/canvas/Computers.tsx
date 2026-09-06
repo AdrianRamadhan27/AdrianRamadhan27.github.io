@@ -18,9 +18,13 @@ const SCREEN_NAME_PATTERN = /MY[_ ]?SCREEN/i;
 // correctly. Flip this to true if a live check shows it backwards instead.
 const FLIP_SCREEN_CONTENT = false;
 
-// World-units-per-CSS-pixel for the projected chat. Arbitrary but must stay
-// consistent with how screenSize below is turned back into a CSS pixel size.
-const HTML_SCALE = 0.0016;
+// drei's <Html transform> "scale" prop is NOT a simple world-units-per-css-
+// pixel factor -- empirically calibrated against this exact camera (fov 25,
+// fixed OrbitControls distance) via a live render: at scale=1 a 400x210 css
+// box rendered at ~933x491 screen px, centered correctly on the monitor, so
+// only the magnitude needed correcting. Re-calibrate if the camera changes.
+const SCREEN_CSS_WIDTH = 380;
+const SCREEN_HTML_SCALE = 0.47;
 
 function findScreenMesh(root: THREE.Object3D): THREE.Mesh | null {
   let found: THREE.Mesh | null = null;
@@ -101,11 +105,11 @@ const Computers = () => {
 
       {screen && (
         <group position={screen.position} quaternion={screen.quaternion}>
-          <Html transform occlude scale={HTML_SCALE} zIndexRange={[10, 0]}>
+          <Html transform occlude scale={SCREEN_HTML_SCALE} zIndexRange={[10, 0]}>
             <div
               style={{
-                width: `${screen.width / HTML_SCALE}px`,
-                height: `${screen.height / HTML_SCALE}px`,
+                width: `${SCREEN_CSS_WIDTH}px`,
+                height: `${SCREEN_CSS_WIDTH / (screen.width / screen.height)}px`,
                 transform: FLIP_SCREEN_CONTENT ? "scaleX(-1)" : undefined,
                 overflow: "hidden",
                 borderRadius: "4px",
