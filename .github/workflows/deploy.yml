@@ -16,6 +16,8 @@ jobs:
 
       - name: Setup Node
         uses: actions/setup-node@v3
+        with:
+          node-version: 20
 
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
@@ -23,11 +25,11 @@ jobs:
       # Inject environment variables from GitHub Secrets
       - name: Inject environment variables
         run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
           echo "VITE_EMAILJS_SERVICE_ID=${{ secrets.EMAILJS_SERVICE_ID }}" >> .env
           echo "VITE_EMAILJS_TEMPLATE_ID=${{ secrets.EMAILJS_TEMPLATE_ID }}" >> .env
-          echo "VITE_EMAILJS_PUBLIC_KEY=${{ secrets.EMAILJS_PUBLIC_KEY }}" >> .env
-          echo "VITE_GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
-          echo "VITE_CV_FILE_ID=${{ secrets.CV_FILE_ID }}" >> .env
+          echo "VITE_EMAILJS_ACCESS_TOKEN=${{ secrets.EMAILJS_ACCESS_TOKEN }}" >> .env
 
       - name: Build project
         run: npm run build
