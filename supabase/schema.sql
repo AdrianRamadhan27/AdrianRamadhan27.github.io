@@ -24,10 +24,19 @@ create table if not exists profile (
   email text not null default '',
   photo_path text,
   cv_path text,
+  -- Extra facts for the chatbot only (full legal name, location, personality,
+  -- aspirations, etc.) -- things worth the assistant knowing that don't need
+  -- to appear verbatim in the public About text. Combined server-side (see
+  -- supabase/functions/chat) with skills/experience/projects into one
+  -- factual context block, kept separate from chat_settings.system_prompt,
+  -- which is pure behavioral instruction and carries no facts about Adrian.
+  chat_context text not null default '',
   updated_at timestamptz not null default now(),
   constraint profile_singleton check (id = 1)
 );
 insert into profile (id) values (1) on conflict (id) do nothing;
+-- Safe to re-run against an already-deployed database that predates this column.
+alter table profile add column if not exists chat_context text not null default '';
 
 alter table profile enable row level security;
 create policy "profile_public_read" on profile for select to anon using (true);

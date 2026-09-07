@@ -15,6 +15,68 @@ const RATE_LIMIT_MAX_REQUESTS = 10;
 
 type ClientMessage = { role: "user" | "assistant"; content: string };
 
+// Builds the factual half of the system message from the content tables
+// themselves, so chat_settings.system_prompt only ever has to say HOW to
+// respond -- tone, boundaries, what to do with off-topic questions -- and
+// never has to be hand-edited every time a project or skill changes. This
+// runs on every request rather than being cached, trading a few extra ms
+// for the CMS content always being current.
+function buildContextBlock(
+  profile: Record<string, unknown> | null,
+  experiences: Record<string, unknown>[],
+  projects: Record<string, unknown>[],
+  skills: Record<string, unknown>[]
+): string {
+  const lines: string[] = [];
+
+  if (profile) {
+    if (profile.full_name) lines.push(`Name: ${profile.full_name}`);
+    if (profile.headline) lines.push(`Headline: ${profile.headline}`);
+    if (profile.about_text) lines.push(`About: ${profile.about_text}`);
+    if (profile.email) lines.push(`Contact email: ${profile.email}`);
+    if (profile.chat_context) lines.push(`Additional notes: ${profile.chat_context}`);
+  }
+
+  if (skills.length > 0) {
+    const byCategory = new Map<string, string[]>();
+    for (const s of skills) {
+      const category = (String(s.category ?? "").trim() || "Other") as string;
+      const list = byCategory.get(category) ?? [];
+      list.push(String(s.name));
+      byCategory.set(category, list);
+    }
+    lines.push("", "Skills:");
+    for (const [category, names] of byCategory) {
+      lines.push(`- ${category}: ${names.join(", ")}`);
+    }
+  }
+
+  if (experiences.length > 0) {
+    lines.push("", "Experience:");
+    for (const e of experiences) {
+      lines.push(`- ${e.title} at ${e.company_name} (${e.date_label})`);
+      for (const point of (e.points as string[] | null) ?? []) {
+        lines.push(`  • ${point}`);
+      }
+    }
+  }
+
+  if (projects.length > 0) {
+    lines.push("", "Projects:");
+    for (const p of projects) {
+      const tags = ((p.tags as { name: string }[] | null) ?? [])
+        .map((t) => t.name)
+        .join(", ");
+      const live = p.live_link ? ` (live: ${p.live_link})` : "";
+      lines.push(
+        `- ${p.name}: ${p.description}${tags ? ` [${tags}]` : ""}${live}`
+      );
+    }
+  }
+
+  return lines.join("\n").trim();
+}
+
 async function hashIp(ip: string): Promise<string> {
   const data = new TextEncoder().encode(ip);
   const digest = await crypto.subtle.digest("SHA-256", data);
@@ -67,10 +129,25 @@ Deno.serve(async (req) => {
     });
   }
 
-  // --- settings + secret ---
-  const [{ data: settings }, { data: secret }] = await Promise.all([
+  // --- settings + secret + everything the model should know about Adrian ---
+  // Fetched alongside settings/secret rather than gated behind them so one
+  // Promise.all covers the whole request; content-table failures degrade to
+  // an empty context block (buildContextBlock treats missing data as
+  // "nothing to add") rather than failing the whole chat.
+  const [
+    { data: settings },
+    { data: secret },
+    { data: profile },
+    { data: experiences },
+    { data: projects },
+    { data: skills },
+  ] = await Promise.all([
     supabase.from("chat_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("chat_secrets").select("api_key").eq("id", 1).maybeSingle(),
+    supabase.from("profile").select("*").eq("id", 1).maybeSingle(),
+    supabase.from("experiences").select("*").order("sort_order"),
+    supabase.from("projects").select("*").order("sort_order"),
+    supabase.from("skills").select("*").order("sort_order"),
   ]);
 
   if (!settings || !settings.enabled) {
@@ -106,8 +183,24 @@ Deno.serve(async (req) => {
       content: String(m.content ?? "").slice(0, MAX_MESSAGE_CHARS),
     }));
 
+  // Merged into ONE system message rather than two -- several
+  // OpenAI-compatible providers only honor the first "system" role message
+  // in the array, so a separate context message would silently be ignored
+  // by some of them. settings.system_prompt (edited in the CMS) stays pure
+  // behavioral instruction; the context block underneath is assembled fresh
+  // from the content tables on every request.
+  const contextBlock = buildContextBlock(
+    profile,
+    experiences ?? [],
+    projects ?? [],
+    skills ?? []
+  );
+  const systemContent = contextBlock
+    ? `${settings.system_prompt}\n\n---\nReference information about the portfolio owner. Use this to answer questions; do not invent facts that aren't listed here:\n${contextBlock}`
+    : settings.system_prompt;
+
   const messages = [
-    { role: "system", content: settings.system_prompt },
+    { role: "system", content: systemContent },
     ...history,
   ];
 

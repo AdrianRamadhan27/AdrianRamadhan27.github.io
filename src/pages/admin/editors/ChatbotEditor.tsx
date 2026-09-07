@@ -214,15 +214,23 @@ const ChatbotEditor = () => {
       </div>
 
       <div className={fieldClass}>
-        <label className={labelClass}>System prompt</label>
+        <label className={labelClass}>System prompt (behavior only)</label>
         <textarea
           rows={6}
           className={inputClass}
+          placeholder="Tone, boundaries, and how to handle off-topic questions -- e.g. 'Answer as if introducing Adrian to a visitor. Keep answers brief. Decline offensive or irrelevant questions.' Facts about Adrian (skills, experience, projects, profile) are added automatically -- no need to list them here."
           value={settings.system_prompt}
           onChange={(e) =>
             setSettings({ ...settings, system_prompt: e.target.value })
           }
         />
+        <p className="text-secondary mt-1 text-[12px]">
+          The model always receives his skills, experience, projects, and
+          profile automatically, assembled fresh from the CMS on every
+          message -- this field only needs to say how to respond, not who he
+          is. Edit the Profile tab's "extra context" field for facts that
+          aren't already covered by those tables.
+        </p>
       </div>
 
       <div className={fieldClass}>

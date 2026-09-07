@@ -18,6 +18,7 @@ type ProfileRow = {
   email: string;
   photo_path: string | null;
   cv_path: string | null;
+  chat_context: string;
 };
 
 const EMPTY: ProfileRow = {
@@ -28,6 +29,7 @@ const EMPTY: ProfileRow = {
   email: "",
   photo_path: null,
   cv_path: null,
+  chat_context: "",
 };
 
 const ProfileEditor = () => {
@@ -42,7 +44,11 @@ const ProfileEditor = () => {
       if (!supabase) return;
       const { data } = await supabase.from("profile").select("*").maybeSingle();
       if (data) {
-        setRow(data as ProfileRow);
+        // Spread over EMPTY, not just a cast: chat_context is a newer column
+        // -- a database that hasn't had the migration run yet returns rows
+        // without it, which would otherwise make the textarea an
+        // uncontrolled-input warning (value undefined).
+        setRow({ ...EMPTY, ...(data as ProfileRow) });
         setHeroLinesText(((data as ProfileRow).hero_lines ?? []).join("\n"));
       }
       setLoading(false);
@@ -155,6 +161,24 @@ const ProfileEditor = () => {
           value={row.about_text}
           onChange={(e) => setRow({ ...row, about_text: e.target.value })}
         />
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>
+          Extra context for the chatbot (not shown publicly)
+        </label>
+        <textarea
+          rows={4}
+          className={inputClass}
+          placeholder="e.g. full legal name, location, personality type, aspirations, favorite color -- anything worth the chatbot knowing that doesn't belong in the public About text"
+          value={row.chat_context}
+          onChange={(e) => setRow({ ...row, chat_context: e.target.value })}
+        />
+        <p className="text-secondary mt-1 text-[12px]">
+          Combined automatically with your skills, experience, and projects
+          to give the chatbot factual context. The Chatbot tab's system
+          prompt only needs to describe tone and behavior, not facts.
+        </p>
       </div>
 
       <div className={fieldClass}>

@@ -16,6 +16,12 @@ update profile set
   ],
   about_text = 'I am a Computer Science student at the University of Indonesia (Fast Track Bachelor''s + Master''s) with a deep passion for Artificial Intelligence and Data Science. I also have strong skills in front-end and back-end development, mobile development, and have dabbled in cybersecurity.',
   email = 'ramadhanadrian2710@gmail.com',
+  -- Facts the chatbot should know that don't fit the public About text --
+  -- moved out of chat_settings.system_prompt (see below), which used to
+  -- hand-bake these plus a stale, hand-typed summary of skills/projects/
+  -- experience. Those are now assembled automatically from their own
+  -- tables on every chat request instead (supabase/functions/chat).
+  chat_context = 'Full legal name: Raden Mohamad Adrian Ramadhan Hendar Wibawa (goes by Adrian). Location: Depok, Indonesia. Personality type: INFJ. Favourite color: green (matches this site''s theme). Aspiration: AI Engineer, Data Scientist, or Full-Stack Developer.',
   updated_at = now()
 where id = 1;
 
@@ -190,21 +196,17 @@ insert into socials (label, url, icon_key, sort_order) values
 -- base_url/model default to Groq's OpenAI-compatible endpoint since that's
 -- what the old site used -- change provider/model freely from the CMS.
 -- The API key itself is set separately, from the CMS (never via SQL).
+-- Pure behavior: no facts about Adrian belong here anymore. The chat edge
+-- function prepends a factual context block (profile + chat_context +
+-- skills + experience + projects, assembled fresh on every request) ahead
+-- of this text before calling the model -- see buildContextBlock in
+-- supabase/functions/chat/index.ts.
 update chat_settings set
   base_url = 'https://api.groq.com/openai/v1',
-  system_prompt = 'You are an assistant embedded in Adrian Ramadhan''s portfolio website. Answer questions about him, the portfolio author, from his point of view (as if you were introducing him to a visitor).
-
-Some facts about him:
-- Full name: Raden Mohamad Adrian Ramadhan Hendar Wibawa (goes by Adrian).
-- Computer Science student at the University of Indonesia (Fast Track Bachelor''s + Master''s program).
-- Interests: Artificial Intelligence, Data Science, full-stack web development, mobile development, and some cybersecurity.
-- Aspiration: AI Engineer, Data Scientist, or Full-Stack Developer.
-- Location: Depok, Indonesia.
-- Personality type: INFJ.
-- Favourite color: green (matches this site''s theme).
+  system_prompt = 'You are an assistant embedded in Adrian Ramadhan''s portfolio website. Answer questions about him, the portfolio author, from his point of view (as if you were introducing him to a visitor), using only the reference information you are given.
 
 When asked about his resume/CV, tell them to use the "View CV" button on the site.
-When asked about projects, skills, or experience, summarize from what you know and suggest they scroll to that section.
+When asked about projects, skills, or experience, summarize from the reference information and suggest they scroll to that section.
 When asked about ways to contact him, point them to the Contact section.
 If asked something irrelevant to his profile, politely decline to answer.
 If asked something about him you don''t have data for, say you''re not sure and suggest they ask him directly via the Contact section.
