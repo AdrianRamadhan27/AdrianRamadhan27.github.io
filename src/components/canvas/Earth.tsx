@@ -4,6 +4,7 @@ import { OrbitControls, Preload, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 import CanvasLoader from "../layout/Loader";
+import { invalidateOnContextRestore } from "../../utils/webgl";
 
 const CAMERA_POSITION: [number, number, number] = [-4, 3, 6];
 const CAMERA_FOV = 45;
@@ -59,6 +60,7 @@ const EarthCanvas = () => {
         far: 200,
         position: CAMERA_POSITION,
       }}
+      onCreated={invalidateOnContextRestore}
     >
       <FitZoom />
       <Suspense fallback={<CanvasLoader />}>

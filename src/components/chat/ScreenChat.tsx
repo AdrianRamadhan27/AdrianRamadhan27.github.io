@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { streamChat, type ChatMessage } from "../../lib/chatClient";
+import { createTypewriter, type Typewriter } from "../../lib/typewriter";
 import type { TChatPublicSettings } from "../../types";
 
 // Shared chat UI: mounted both projected onto the 3D monitor (desktop) and
@@ -25,11 +26,22 @@ const ScreenChat = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typerRef = useRef<Typewriter | null>(null);
 
   useEffect(() => {
-    if (chatPublic.greeting) {
-      setMessages([{ role: "assistant", content: chatPublic.greeting }]);
-    }
+    return () => typerRef.current?.cancel();
+  }, []);
+
+  useEffect(() => {
+    if (!chatPublic.greeting) return;
+    typerRef.current?.cancel();
+    setMessages([{ role: "assistant", content: "" }]);
+    const typer = createTypewriter((text) => {
+      setMessages([{ role: "assistant", content: text }]);
+    });
+    typerRef.current = typer;
+    typer.push(chatPublic.greeting);
+    typer.finish();
   }, [chatPublic.greeting]);
 
   useEffect(() => {
@@ -49,19 +61,28 @@ const ScreenChat = ({
     setBusy(true);
     setError(null);
 
-    let assistantSoFar = "";
     setMessages((m) => [...m, { role: "assistant", content: "" }]);
+
+    typerRef.current?.cancel();
+    const typer = createTypewriter((text) => {
+      setMessages((m) => {
+        const copy = [...m];
+        copy[copy.length - 1] = { role: "assistant", content: text };
+        return copy;
+      });
+    });
+    typerRef.current = typer;
 
     try {
       await streamChat(nextHistory, (chunk) => {
-        assistantSoFar += chunk;
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = { role: "assistant", content: assistantSoFar };
-          return copy;
-        });
+        typer.push(chunk);
       });
+      // Network stream is done, but the typewriter may still be catching
+      // up (it reveals slower than chunks can arrive) -- keep the input
+      // disabled and the cursor blinking until it actually finishes.
+      await new Promise<void>((resolve) => typer.finish(resolve));
     } catch (e) {
+      typer.cancel();
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setMessages((m) => m.slice(0, -1));
     } finally {

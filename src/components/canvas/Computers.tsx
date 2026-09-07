@@ -6,6 +6,7 @@ import * as THREE from "three";
 import CanvasLoader from "../layout/Loader";
 import ScreenChat from "../chat/ScreenChat";
 import { useContent } from "../../hooks/useContent";
+import { invalidateOnContextRestore } from "../../utils/webgl";
 import type { TChatPublicSettings } from "../../types";
 
 // GLTFLoader sanitizes the original "MY SCREEN" node name (spaces become
@@ -177,7 +178,7 @@ const ComputersCanvas = () => {
   if (isMobile) {
     return (
       <div className="mt-8 px-6">
-        <div className="mx-auto h-[70vh] max-h-[520px] w-full max-w-md overflow-hidden rounded-2xl border border-[#00df9a]/30 shadow-lg">
+        <div className="mx-auto h-[52vh] max-h-[420px] w-full max-w-md overflow-hidden rounded-2xl border border-[#00df9a]/30 shadow-lg">
           <ScreenChat compact chatPublic={chatPublic} />
         </div>
       </div>
@@ -191,6 +192,7 @@ const ComputersCanvas = () => {
       dpr={[1, 2]}
       camera={{ position: [20, 3, 5], fov: 25 }}
       gl={{ preserveDrawingBuffer: true }}
+      onCreated={invalidateOnContextRestore}
     >
       <Suspense fallback={<CanvasLoader />}>
         <OrbitControls
