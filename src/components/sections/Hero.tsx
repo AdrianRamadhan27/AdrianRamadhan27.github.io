@@ -8,7 +8,7 @@ import { scrollToSection } from "../../utils/scrollToSection";
 import CvModal from "../ui/CvModal";
 
 const Hero = () => {
-  const { profile } = useContent();
+  const { profile, loading } = useContent();
   const [cvOpen, setCvOpen] = useState(false);
 
   // min-h-screen alone lets mobile content (text + stacked chat panel) grow
@@ -35,21 +35,49 @@ const Hero = () => {
         </div>
 
         <div>
-          <h1 className={`${styles.heroHeadText} text-white`}>
-            Hi, I'm <span className="text-accent">{profile.fullName}</span>
-          </h1>
-          <p className={`${styles.heroSubText} text-white-100 mt-2`}>
-            {profile.heroLines.map((line, index) => (
-              <React.Fragment key={index}>
-                {line}
-                {index < profile.heroLines.length - 1 && (
-                  <br className="hidden sm:block" />
-                )}
-              </React.Fragment>
-            ))}
-          </p>
+          {/* Gated on loading, not just "does profile have data yet" --
+              profile starts out holding the bundled fallback constants
+              (so other, non-Supabase-dependent parts of the page never
+              render empty), which used to mean this showed that fallback
+              text immediately, then visibly swapped to the real DB content
+              a moment later. Skeleton until the fetch actually settles
+              (success or failure) removes that flash of wrong-then-right
+              text entirely -- once loading is false, whatever profile
+              resolved to (real data, or the fallback if the fetch
+              ultimately failed) renders normally. */}
+          {loading ? (
+            // Fixed pixel widths, not percentages: this div is a flex item
+            // that would otherwise shrink-to-fit its content (there's no
+            // text here to size against, unlike the real h1/p), so a
+            // percentage-width child has no definite parent width to
+            // resolve against and collapses to 0.
+            <div aria-hidden className="animate-pulse">
+              <div className="h-[40px] w-[220px] rounded-lg bg-white/10 xs:h-[50px] xs:w-[300px] sm:h-[60px] sm:w-[420px] lg:h-[80px] lg:w-[560px]" />
+              <div className="mt-4 space-y-2">
+                <div className="h-[16px] w-[240px] rounded bg-white/10 xs:h-[20px] xs:w-[320px] sm:h-[26px] sm:w-[380px] lg:h-[30px] lg:w-[420px]" />
+                <div className="h-[16px] w-[200px] rounded bg-white/10 xs:h-[20px] xs:w-[280px] sm:h-[26px] sm:w-[340px] lg:h-[30px] lg:w-[380px]" />
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className={`${styles.heroHeadText} text-white`}>
+                Hi, I'm{" "}
+                <span className="text-accent">{profile.fullName}</span>
+              </h1>
+              <p className={`${styles.heroSubText} text-white-100 mt-2`}>
+                {profile.heroLines.map((line, index) => (
+                  <React.Fragment key={index}>
+                    {line}
+                    {index < profile.heroLines.length - 1 && (
+                      <br className="hidden sm:block" />
+                    )}
+                  </React.Fragment>
+                ))}
+              </p>
+            </>
+          )}
 
-          {profile.cvUrl && (
+          {!loading && profile.cvUrl && (
             <button
               onClick={() => setCvOpen(true)}
               className="bg-accent hover:bg-accent-dim pointer-events-auto mt-6 inline-block rounded-full px-6 py-3 text-[14px] font-bold text-black transition-colors"

@@ -53,7 +53,18 @@ const Portrait = ({ src }: { src: string }) => (
     glareColor="#00df9a"
     className="mx-auto h-[380px] w-full max-w-[280px] shrink-0 md:mx-0 md:h-auto md:w-2/5 md:max-w-none md:self-stretch"
   >
+    {/* Own initial/whileInView rather than inheriting from the section's
+        motion.section: this only mounts once profile.photoUrl resolves
+        from an async Supabase fetch, often well after the section's own
+        scroll-triggered reveal already fired (and, with viewport once:true,
+        disconnected). A late-mounting child that just inherits variant
+        context doesn't get told to animate in when that happens -- it
+        renders straight into its "hidden" values (opacity:0, off to the
+        side) and stays there forever, since nothing ever re-fires. */}
     <motion.div
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: "some" }}
       variants={fadeIn("left", "spring", 0.1, 0.9)}
       className="green-pink-gradient shadow-card h-full rounded-[24px] p-[3px]"
     >
