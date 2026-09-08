@@ -15,6 +15,11 @@ jobs:
     steps:
       - name: Ping Supabase REST endpoint
         run: |
+          # Supabase's gateway (Kong) requires BOTH headers on /rest/v1/* --
+          # apikey alone 401s. Same requirement documented in
+          # src/lib/chatClient.ts for the edge functions; missed here
+          # originally because a REST root ping looked simpler than it is.
           curl -sf -o /dev/null -w "%{http_code}\n" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
