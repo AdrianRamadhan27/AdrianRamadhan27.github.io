@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   VerticalTimeline,
   VerticalTimelineElement,
@@ -12,14 +12,54 @@ import { TExperience } from "../../types";
 import { config } from "../../constants/config";
 import { useContent } from "../../hooks/useContent";
 
-const ExperienceCard: React.FC<TExperience> = (experience) => {
+// How many arrows climb the timeline's line at once, and how long one
+// arrow's full rise-and-loop takes -- kept in sync with globals.css's own
+// `.timeline-progress-arrow { animation: timeline-arrow-rise 4.5s ... }`
+// duration, since the even spacing below is computed from it (duration /
+// count = the gap between each arrow's animation-delay, so five arrows
+// spread evenly across one full cycle read as a continuous queue rather
+// than a single arrow -- see the Experience component's own comment on
+// this for why it can't just be one).
+const ARROW_QUEUE_COUNT = 5;
+const ARROW_RISE_DURATION_S = 4.5;
+
+const ExperienceCard: React.FC<TExperience & { isLast: boolean }> = ({
+  isLast,
+  ...experience
+}) => {
   return (
     <VerticalTimelineElement
       contentStyle={{
-        background: "#0d1f19",
+        // No `background` here anymore -- .timeline-card-glow (below)
+        // handles it now, via a background-clip trick that needs to own
+        // the property outright (see that class's comment in globals.css
+        // for why: an inline style's background would otherwise always
+        // beat anything the stylesheet tries to layer in behind it).
         color: "#fff",
       }}
       contentArrowStyle={{ borderRight: "7px solid  #0a1712" }}
+      // Static class (drives the plain :hover trigger in globals.css) --
+      // Experience.tsx's own IntersectionObserver additionally toggles
+      // "is-centered" directly on this same DOM node (classList, not
+      // through this prop) once it's mounted, since the library exposes
+      // no ref to it for us to drive that reactively instead.
+      textClassName="timeline-card-glow"
+      // Keeps the company logo painting above the queued arrows climbing
+      // the line behind it (see .timeline-icon-front in globals.css).
+      iconClassName="timeline-icon-front"
+      // The OUTER element -- the one ancestor .timeline-card-glow (the
+      // content box) and the icon circle both sit under -- so
+      // :has(.timeline-card-glow:hover) in globals.css can glow the line
+      // segment and logo circle together whenever the card itself is
+      // hovered/centered (see .timeline-job-glow's comment there).
+      //
+      // isLast is passed explicitly rather than targeted via a :last-child
+      // CSS selector -- the 5 queued-arrow divs (below) render AFTER every
+      // card as later siblings under the same <VerticalTimeline>, so the
+      // true last DOM child is always one of those, never the last actual
+      // job; :last-child (and :last-of-type, since they're plain divs too)
+      // would silently never match any card at all.
+      className={`timeline-job-glow${isLast ? " timeline-job-glow--last" : ""}`}
       date={experience.date}
       iconStyle={{ background: experience.iconBg }}
       icon={
@@ -52,21 +92,108 @@ const ExperienceCard: React.FC<TExperience> = (experience) => {
           </li>
         ))}
       </ul>
+
+      {/* The arrow marker that circles this card's outline (see
+          .timeline-card-orbit's comment in globals.css for how
+          offset-path makes it trace the card's own border, rounded
+          corners included, rather than a plain rectangle guess). Renders
+          inside .timeline-card-glow (this whole block IS that element's
+          children, per VerticalTimelineElement's own source) so its
+          inset:-3px lines up exactly with that element's real border. */}
+      <div className="timeline-card-orbit" aria-hidden>
+        <div className="timeline-card-orbit-icon">
+          <svg viewBox="0 0 24 24" fill="none" className="h-full w-full">
+            <path
+              d="M4 12h15M13 6l6 6-6 6"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
     </VerticalTimelineElement>
   );
 };
 
 const Experience = () => {
   const { experiences } = useContent();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // "Centered in viewport" -- react-vertical-timeline-component's own
+  // internal InView (used for its bounce-in reveal) only checks "has this
+  // scrolled into view at all", not "is this the one currently in the
+  // middle of the screen", and doesn't expose that state to us anyway.
+  // Runs once per experiences list change (not per card) via a single
+  // observer watching every .timeline-card-glow node found under this
+  // section -- cheaper than one observer per card, and the DOM order of
+  // that query always matches render order regardless of how many there
+  // are.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const cards = Array.from(
+      container.querySelectorAll<HTMLElement>(".timeline-card-glow")
+    );
+    if (cards.length === 0) return;
+
+    // A thin horizontal band through the vertical middle of the viewport
+    // -- a card is "centered" only while it overlaps that band, not
+    // merely "somewhere on screen" (the default any-visibility check).
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          entry.target.classList.toggle("is-centered", entry.isIntersecting);
+        }
+      },
+      { rootMargin: "-45% 0px -45% 0px", threshold: 0 }
+    );
+    cards.forEach((card) => observer.observe(card));
+    return () => observer.disconnect();
+  }, [experiences]);
 
   return (
     <>
       <Header useMotion={true} {...config.sections.experience} />
 
-      <div className="mt-20 flex flex-col">
+      <div className="mt-20 flex flex-col" ref={containerRef}>
         <VerticalTimeline>
           {experiences.map((experience, index) => (
-            <ExperienceCard key={experience.id ?? index} {...experience} />
+            <ExperienceCard
+              key={experience.id ?? index}
+              {...experience}
+              isLast={index === experiences.length - 1}
+            />
+          ))}
+          {/* Appended AFTER every mapped card, not interleaved -- keeps
+              the library's own :nth-child(even) alternating-side CSS
+              (two-column desktop layout) counting correctly among the
+              real .vertical-timeline-element siblings; these plain divs
+              don't match that selector at all, so their presence at the
+              end doesn't shift anything before them.
+
+              Five, not one -- all running the SAME rise animation, just
+              staggered by an even fraction of its own duration via
+              animation-delay, so they read as one continuous queue
+              climbing the line rather than a single lonely arrow. */}
+          {Array.from({ length: ARROW_QUEUE_COUNT }, (_, i) => (
+            <div
+              key={i}
+              className="timeline-progress-arrow"
+              style={{ animationDelay: `${(i * ARROW_RISE_DURATION_S) / ARROW_QUEUE_COUNT}s` }}
+              aria-hidden
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-full w-full">
+                <path
+                  d="M12 19V5M12 5L5 12M12 5l7 7"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
           ))}
         </VerticalTimeline>
       </div>

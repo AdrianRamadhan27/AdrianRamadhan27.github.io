@@ -96,7 +96,11 @@ const ScreenChat = ({
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Type a message…"
           disabled={busy}
-          className={`flex-1 bg-transparent text-white outline-none placeholder:text-[#00df9a]/40 ${
+          // min-w-0: same fix as ChatInputBar's own input -- a flex item's
+          // default min-width:auto keeps it from shrinking below its
+          // intrinsic content width no matter how little room flex-1
+          // actually has to give it.
+          className={`min-w-0 flex-1 bg-transparent text-white outline-none placeholder:text-[#00df9a]/40 ${
             compact ? "text-[13px]" : "text-[11px]"
           }`}
         />

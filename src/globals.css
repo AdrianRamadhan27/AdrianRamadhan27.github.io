@@ -14,7 +14,10 @@
 }
 
 .bg-hero-glow {
-  background-color: #050f0c;
+  /* Was a fully opaque #050f0c -- now translucent so the page-wide starfield
+     (see StarsCanvas in Home.tsx, previously scoped to only the Contact
+     section) shows through the hero too, not just the rest of the page. */
+  background-color: rgba(5, 15, 12, 0.86);
   background-image:
     radial-gradient(circle at 15% 20%, rgba(0, 223, 154, 0.16) 0%, transparent 45%),
     radial-gradient(circle at 85% 0%, rgba(0, 223, 154, 0.1) 0%, transparent 40%),
@@ -114,6 +117,256 @@
   ); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* timeline- styles (Experience section) --------------------------------- */
+
+/* A solid outline around each timeline card, with a small arrow marker
+   that continuously travels around that SAME outline -- on hover (pure
+   CSS) or when the card is scrolled to the vertical center of the
+   viewport (is-centered, toggled imperatively by Experience.tsx's own
+   IntersectionObserver -- react-vertical-timeline-component doesn't expose
+   a ref to this element, so that's plain DOM classList manipulation, not
+   React state).
+
+   (First and second attempts both drew a stationary glow effect instead
+   of an actual circling marker -- a ::before pseudo with a mask-composite
+   cutout, then a rotating conic-gradient border -- neither of which is
+   what "an arrow point circling the box round and round" actually asks
+   for: a single point tracing the perimeter, not a diffuse ring. This is
+   the one part of the earlier attempts worth keeping: the outline itself
+   uses the same border + background-clip double-layer trick, just with a
+   flat color instead of a rotating gradient now, since it's just a static
+   backdrop for the traveling marker rather than the effect itself.
+
+   contentStyle no longer sets `background` (see Experience.tsx) -- an
+   inline style's background would always beat anything layered in here,
+   since inline author styles outrank any external stylesheet rule
+   regardless of selector specificity. */
+.timeline-card-glow {
+  position: relative;
+  border: 3px solid transparent;
+  border-radius: 0.25em;
+  background:
+    linear-gradient(#0d1f19, #0d1f19) padding-box,
+    linear-gradient(#0d1f19, #0d1f19) border-box;
+}
+.timeline-card-glow:hover,
+.timeline-card-glow.is-centered {
+  background:
+    linear-gradient(#0d1f19, #0d1f19) padding-box,
+    linear-gradient(#00df9a, #00df9a) border-box;
+}
+
+/* The traveling marker itself. offset-path: border-box makes an element
+   follow the actual border edge of ITS OWN box (including real rounded
+   corners) -- not a parent's or a sibling's, its own -- which is why this
+   wrapper is sized via inset:-3px to exactly coincide with the card's
+   outline above rather than being the small visible arrow directly: the
+   VISIBLE icon is a child centered inside it (top/left 50% + translate
+   -50%/-50%, i.e. sitting exactly at this wrapper's own transform-origin,
+   the point offset-path actually moves), so as the wrapper's origin gets
+   carried around the path, the icon rigidly comes along for the ride and
+   traces the same outline. offset-rotate:auto additionally spins that
+   same origin to match the path's tangent direction, which is what makes
+   the arrow icon actually point the way it's travelling instead of
+   staying level the whole way round.
+   Support: Chrome/Edge and Safari 16+; older/unsupported browsers just
+   show the arrow inert at the card's center -- an odd-looking but
+   harmless fallback, not a broken one, for what's a decorative flourish. */
+.timeline-card-orbit {
+  position: absolute;
+  inset: -3px;
+  offset-path: border-box;
+  offset-rotate: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.timeline-card-glow:hover .timeline-card-orbit,
+.timeline-card-glow.is-centered .timeline-card-orbit {
+  opacity: 1;
+  animation: timeline-orbit-move 4s linear infinite;
+}
+@keyframes timeline-orbit-move {
+  to {
+    offset-distance: 100%;
+  }
+}
+.timeline-card-orbit-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  color: #00df9a;
+  filter: drop-shadow(0 0 4px rgba(0, 223, 154, 0.9));
+}
+
+/* Icons need to paint ABOVE the queued arrows below (also see the
+   z-index:0 there) -- see the icon's own iconClassName usage in
+   Experience.tsx. */
+.timeline-icon-front {
+  z-index: 2;
+}
+
+/* The line segment + logo circle for the job currently hovered/centered,
+   glowing to match its card (.timeline-card-glow above). Applied via the
+   `className` prop on VerticalTimelineElement (the OUTER
+   .vertical-timeline-element div, the one ancestor common to both the
+   content box and the icon circle -- the library gives no other hook that
+   reaches both at once). :has() lets a single hover/is-centered state on
+   the descendant content box drive styling on this ancestor and, through
+   it, its OTHER descendant (the icon) -- there's no combinator that goes
+   "sideways" from content to a PRECEDING sibling icon directly, since
+   general/adjacent sibling combinators only look forward in DOM order and
+   the icon span is rendered before the content div (see
+   VerticalTimelineElement's own source).
+
+   The line segment itself is this element's own ::before, not a real DOM
+   node -- VerticalTimelineElement's props give no way to inject an actual
+   extra child here, but className reaches the real element, so a pseudo
+   on it works instead. left:18px/50% + the 1170px breakpoint deliberately
+   mirror .vertical-timeline::before's own positioning (see
+   react-vertical-timeline-component's style.min.css) so this overlays the
+   REAL line rather than guessing its position; top/bottom:0 spans this
+   one element's own vertical extent, i.e. "the line beside this job" from
+   its icon down to the next one. z-index:0 keeps it under both the
+   content box and the icon (.timeline-icon-front, z-index:2) regardless
+   of DOM/paint-order specifics. */
+.timeline-job-glow {
+  position: relative;
+}
+/* Restores the library's own intent for its last item
+   (.vertical-timeline-element:last-child{margin-bottom:0}, style.min.css)
+   -- that selector no longer matches the real last job at all, for the
+   same reason noted below on .timeline-job-glow--last::before: the
+   queued-arrow divs trail after every card, so the true last DOM child is
+   always one of those. Without this override the last card silently kept
+   its normal 2em/4em margin-bottom, leaving unintended trailing
+   whitespace under the timeline. Compound selector (not a bare class) so
+   this reliably outranks the library's own same-specificity rule
+   regardless of the two stylesheets' import order. */
+.vertical-timeline-element.timeline-job-glow--last {
+  margin-bottom: 0;
+}
+.timeline-job-glow::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  /* Reaches past this element's own bottom edge, through the margin gap
+     down to the next job's icon, instead of stopping flush at this job's
+     own box -- adjacent .vertical-timeline-element margins collapse (both
+     are plain in-flow block siblings), so the real visible gap is exactly
+     one job's own margin, not two summed: 2em here, 4em at the desktop
+     breakpoint below, matching the library's own margin:2em 0 / margin:4em
+     0 (style.min.css) so this lines up with the ACTUAL gap rather than a
+     guess. Last child has no job below and no such gap (the library zeroes
+     its margin-bottom too), so nothing to extend into there. */
+  bottom: -2em;
+  left: 18px;
+  width: 4px;
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0;
+  transition:
+    opacity 0.3s ease,
+    background-color 0.3s ease;
+  pointer-events: none;
+}
+/* The last job has no job below to reach for, but the real line doesn't
+   stop at its box either -- with its own margin-bottom now zeroed (see
+   .timeline-job-glow--last above), the only remaining gap between this
+   item's bottom edge and the true end of the line is .vertical-timeline's
+   own padding:2em 0 (unchanged across breakpoints, unlike the
+   per-element margin used for non-last items above), which the line's
+   height:100% still spans. -2em here reaches exactly that far, to the
+   very end of the line, instead of stopping short at the item's own box
+   like the default bottom:-2em/-4em above would.
+
+   .timeline-job-glow--last, not :last-child -- the queued-arrow divs
+   (Experience.tsx) render as later siblings after every card under the
+   same <VerticalTimeline>, so the true last DOM child is always one of
+   those, never the last actual job; :last-child would silently never
+   match any card. Experience.tsx sets this class explicitly instead. */
+.timeline-job-glow--last::before {
+  bottom: -2em;
+}
+@media only screen and (min-width: 1170px) {
+  .timeline-job-glow::before {
+    left: 50%;
+    margin-left: -2px;
+    bottom: -4em;
+  }
+  .timeline-job-glow--last::before {
+    bottom: -2em;
+  }
+}
+.timeline-job-glow:has(.timeline-card-glow:hover)::before,
+.timeline-job-glow:has(.timeline-card-glow.is-centered)::before {
+  opacity: 1;
+  background-color: #00df9a;
+  box-shadow: 0 0 12px 2px rgba(0, 223, 154, 0.85);
+}
+.timeline-job-glow:has(.timeline-card-glow:hover) .vertical-timeline-element-icon,
+.timeline-job-glow:has(.timeline-card-glow.is-centered) .vertical-timeline-element-icon {
+  box-shadow:
+    0 0 0 4px #00df9a,
+    0 0 18px 5px rgba(0, 223, 154, 0.75),
+    inset 0 2px 0 rgba(0, 0, 0, 0.08),
+    0 3px 0 4px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Several arrows at once, evenly staggered along the SAME rise animation
+   (via each one's own animation-delay, set inline per instance in
+   Experience.tsx -- see ARROW_COUNT there), so they read as a queue
+   continuously climbing the line rather than one lone arrow -- purely
+   decorative, an ambient "climbing toward the present" motion pointing at
+   the current/most recent role's icon (experiences are ordered newest-
+   first, so that's the top entry). left:18px/50% and the 1170px
+   breakpoint deliberately mirror .vertical-timeline::before's own
+   positioning rules (see react-vertical-timeline-component's
+   style.min.css) so the queue tracks the actual line rather than an
+   independent guess at where it is. z-index:0, not left unset (auto) --
+   the company logo icons (.timeline-icon-front, z-index:2 above) need to
+   stay in front of the arrows passing behind them, and an explicit 0
+   beats auto reliably regardless of the two elements' relative DOM order. */
+.timeline-progress-arrow {
+  position: absolute;
+  left: 18px;
+  top: 0;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 22px;
+  z-index: 0;
+  color: #00df9a;
+  filter: drop-shadow(0 0 6px rgba(0, 223, 154, 0.85));
+  animation: timeline-arrow-rise 4.5s ease-in-out infinite;
+}
+@media only screen and (min-width: 1170px) {
+  .timeline-progress-arrow {
+    left: 50%;
+  }
+}
+@keyframes timeline-arrow-rise {
+  0% {
+    top: 98%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 2%;
+    opacity: 0;
+  }
 }
 
 /* canvas- styles */

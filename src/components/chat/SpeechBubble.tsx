@@ -8,15 +8,24 @@ const SpeechBubble = ({
   text,
   busy,
   error,
+  // Narrow, shrink-to-content by default (the docked floating widget wants
+  // this -- the bubble sits snug next to the avatar crop there, not
+  // spanning the whole compact widget). The in-hero layouts pass "w-full"
+  // instead so the bubble stretches to match the input bar's own width
+  // sitting right below it, rather than floating narrower and misaligned.
+  widthClassName = "max-w-sm",
 }: {
   text: string;
   busy: boolean;
   error: string | null;
+  widthClassName?: string;
 }) => {
   if (!text && !busy && !error) return null;
 
   return (
-    <div className="border-accent/30 bg-tertiary/90 max-w-sm rounded-2xl border px-4 py-3 shadow-lg backdrop-blur-sm">
+    <div
+      className={`border-accent/30 bg-tertiary/90 ${widthClassName} rounded-2xl border px-4 py-3 shadow-lg backdrop-blur-sm`}
+    >
       {error ? (
         <p className="text-[13px] text-red-400">! {error}</p>
       ) : (

@@ -22,6 +22,15 @@ const Home = () => {
 
   return (
     <div className="bg-primary relative z-0">
+      {/* Previously scoped to just the Contact section's own wrapper --
+          moved up here so it renders once, fixed behind the ENTIRE page,
+          not just one section. Every SectionWrapper-based section (About,
+          Experience, Tech, Works, Contact) paints no background of its
+          own (verified directly in SectionWrapper.tsx), so this shows
+          through all of them uniformly; only the hero's own gradient
+          wrapper needed its base fill lightened to translucent for the
+          same reason (see bg-hero-glow in globals.css). */}
+      <StarsCanvas />
       <div className="bg-hero-glow bg-cover bg-center bg-no-repeat">
         <Navbar />
         <Hero />
@@ -30,10 +39,7 @@ const Home = () => {
       <Experience />
       <Tech />
       <Works />
-      <div className="relative z-0">
-        <Contact />
-        <StarsCanvas />
-      </div>
+      <Contact />
       <Footer />
     </div>
   );

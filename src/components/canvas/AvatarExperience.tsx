@@ -220,6 +220,15 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
 
   const chatInput = <ChatInputBar onSend={handleSend} disabled={busy} />;
   const bubble = <SpeechBubble text={lastAssistant?.content ?? ""} busy={busy} error={error} />;
+  // Stretches to match the input bar's own width below it (both layouts
+  // below give this the same "w-full max-w-md" wrapper the input already
+  // uses) instead of shrinking to its own text content and ending up
+  // narrower and left-edge-misaligned with the input. The docked widget
+  // keeps the narrow default `bubble` -- it sits snug next to the avatar
+  // crop there, not stacked above a same-width input.
+  const wideBubble = (
+    <SpeechBubble text={lastAssistant?.content ?? ""} busy={busy} error={error} widthClassName="w-full" />
+  );
 
   if (docked) {
     if (minimized) {
@@ -307,7 +316,7 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
         <div className="animate-pop h-[46vh] max-h-[390px] w-full max-w-md overflow-hidden rounded-2xl">
           <AvatarCanvas ref={avatarRef} avatarUrl={chatPublic.avatarUrl} className="h-full w-full" />
         </div>
-        <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{bubble}</div>
+        <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{wideBubble}</div>
         <div className="w-full max-w-md">{chatInput}</div>
       </div>
     );
@@ -350,7 +359,7 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
           that growth and makes it scrollable instead, while leaving the
           avatar crop and input bar below it fixed-size and undisturbed. */}
       <div className="absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-3 px-4 sm:bottom-10 sm:px-12">
-        <div className="max-h-[30vh] overflow-y-auto">{bubble}</div>
+        <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{wideBubble}</div>
         <div className="w-full max-w-md">{chatInput}</div>
       </div>
     </div>

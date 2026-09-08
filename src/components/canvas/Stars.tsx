@@ -34,7 +34,15 @@ const Stars = (props: any) => {
 
 const StarsCanvas = () => {
   return (
-    <div className="absolute inset-0 z-[-1] h-auto w-full">
+    // fixed, not absolute: this now renders once for the whole page (see
+    // Home.tsx) rather than scoped to one section's own wrapper -- fixed
+    // pins it to the viewport regardless of scroll position or how tall
+    // the actual page content is, which absolute (sized to a normal-flow
+    // ancestor's own height) can't do without separately tracking the
+    // full document height. pointer-events-none since it's purely
+    // decorative, sitting behind everything anyway -- guards against a
+    // WebGL canvas ever intercepting clicks meant for real page content.
+    <div className="fixed inset-0 z-[-1] h-full w-full pointer-events-none">
       <Canvas camera={{ position: [0, 0, 1] }}>
         <Suspense fallback={null}>
           <Stars />
