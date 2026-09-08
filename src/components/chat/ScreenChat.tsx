@@ -20,9 +20,16 @@ import type { TChatPublicSettings } from "../../types";
 // doesn't use but the avatar one does.
 const ScreenChat = ({
   compact = false,
+  translucent = false,
   chatPublic,
 }: {
   compact?: boolean;
+  /** Swaps the opaque "real monitor" black background for a translucent one
+   *  -- used only by the floating docked widget (ComputersCanvas), which
+   *  wants the page behind it to show through, unlike the projected-onto-
+   *  the-3D-screen and full-width mobile-panel uses, which want to read as
+   *  a real, opaque display. */
+  translucent?: boolean;
   chatPublic: TChatPublicSettings;
 }) => {
   const { messages, busy, error, send } = useChatSession({
@@ -41,9 +48,11 @@ const ScreenChat = ({
     void send(text);
   };
 
+  const bg = translucent ? "bg-black/40" : "bg-black";
+
   if (!chatPublic.enabled) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 bg-black p-4 text-center font-mono text-[#00df9a]">
+      <div className={`flex h-full flex-col items-center justify-center gap-2 ${bg} p-4 text-center font-mono text-[#00df9a]`}>
         <p className="text-[13px] opacity-70">// chat offline</p>
         <p className={compact ? "text-[12px]" : "text-[14px]"}>
           The chatbot isn't configured yet.
@@ -53,7 +62,7 @@ const ScreenChat = ({
   }
 
   return (
-    <div className="flex h-full flex-col bg-black font-mono text-[#00df9a]">
+    <div className={`flex h-full flex-col ${bg} font-mono text-[#00df9a]`}>
       <div
         ref={scrollRef}
         className={`flex-1 space-y-2 overflow-y-auto p-3 ${
@@ -94,9 +103,18 @@ const ScreenChat = ({
         <button
           onClick={handleSend}
           disabled={busy}
+          aria-label="Send"
           className="text-[#00df9a]/80 hover:text-[#00df9a] disabled:opacity-40"
         >
-          ↵
+          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+            <path
+              d="M3 11.5L20 4L12.5 21L10.5 13.5L3 11.5Z"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinejoin="round"
+              fill="currentColor"
+            />
+          </svg>
         </button>
       </div>
     </div>

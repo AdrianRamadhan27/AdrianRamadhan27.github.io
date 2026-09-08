@@ -1,8 +1,22 @@
 // Public endpoint (same trust model as `chat`: protected by the platform's
 // default JWT check -- satisfied by the anon key -- plus its own rate
 // limit, not by requireUser). Synthesizes speech for the avatar hero via
-// whatever OpenAI-compatible TTS endpoint is configured and pipes the raw
-// audio bytes back. The client never sees the base URL, model, or key.
+// whatever OpenAI-compatible TTS endpoint is configured and streams the
+// bytes back AS THEY ARRIVE (upstream.body is piped straight through
+// below, not buffered) so the client can start playing audio before the
+// full reply has finished generating -- see src/lib/audioStreamPlayer.ts.
+//
+// response_format is explicitly "mp3" -- an earlier version requested
+// "pcm" on the (OpenAI) assumption that a TTS endpoint honors it, but
+// probing the live OpenRouter endpoint directly showed it ignores that and
+// always returns real MP3 regardless (Content-Type: audio/mpeg, bytes
+// starting with the FF FB MP3 frame-sync header); requesting raw PCM while
+// actually receiving MP3 is what made the client play static. This
+// function just pipes whatever bytes/Content-Type come back straight
+// through either way -- audioStreamPlayer.ts decodes real MP3 via
+// decodeAudioData, so if a differently-configured provider ever does
+// return true headerless PCM instead, playback would need to change
+// there too. The client never sees the base URL, model, or key.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, handleOptions } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";

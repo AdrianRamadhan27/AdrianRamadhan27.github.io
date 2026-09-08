@@ -5,6 +5,7 @@ import * as THREE from "three";
 
 import CanvasLoader from "../layout/Loader";
 import ScreenChat from "../chat/ScreenChat";
+import { ChatBubbleIcon, ChevronDownIcon } from "../chat/dockIcons";
 import { useContent } from "../../hooks/useContent";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { invalidateOnContextRestore } from "../../utils/webgl";
@@ -202,12 +203,57 @@ const Computers = ({ chatPublic }: { chatPublic: TChatPublicSettings }) => {
 // so the chat has no monitor to project onto — it falls back to a plain panel.
 const MOBILE_BREAKPOINT_PX = 640;
 
-const ComputersCanvas = () => {
+// `docked`: mirrors AvatarExperience's own docked prop -- true once Hero.tsx
+// reports the hero section has scrolled fully out of view. The full 3D
+// desktop is expensive and pointless to keep rendering off in a corner, so
+// docked mode swaps it out entirely for the same flat, non-3D chat panel
+// the mobile fallback already uses (ScreenChat compact), just in a small
+// floating bottom-right widget instead of a full-width mobile panel.
+const ComputersCanvas = ({ docked = false }: { docked?: boolean }) => {
   // Read here, not inside Computers/ScreenChat -- this component sits
   // outside the Canvas in the normal React tree, so it's the right place
   // to read context before threading it down as a plain prop.
   const { chatPublic } = useContent();
   const isMobile = useIsMobile(MOBILE_BREAKPOINT_PX);
+  // Docked-widget-only: collapses the whole thing down to a small circular
+  // reopen button. Meaningless (unread) outside the `docked` branch below.
+  const [minimized, setMinimized] = useState(false);
+
+  if (docked) {
+    if (minimized) {
+      return (
+        <button
+          type="button"
+          onClick={() => setMinimized(false)}
+          aria-label="Open chat"
+          className="fixed bottom-8 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#00df9a] text-black shadow-xl transition-transform hover:scale-105"
+        >
+          <ChatBubbleIcon className="h-6 w-6" />
+        </button>
+      );
+    }
+    return (
+      // bottom-8, not bottom-4: raised enough to clear the footer's own
+      // bottom-right content once scrolled all the way down (this widget
+      // is position:fixed, so it stays in the same viewport corner
+      // regardless of how far the page itself has scrolled). Height stays
+      // fixed (not max-height) -- ScreenChat's own message area is
+      // already `flex-1 overflow-y-auto`, so a long conversation scrolls
+      // inside it instead of growing this container, unlike the avatar
+      // hero's docked widget which needed its own fix for that.
+      <div className="animate-pop fixed bottom-8 right-4 z-40 h-80 w-64 overflow-hidden rounded-2xl border border-[#00df9a]/30 bg-black/40 shadow-xl backdrop-blur-md sm:w-72">
+        <button
+          type="button"
+          onClick={() => setMinimized(true)}
+          aria-label="Minimize chat"
+          className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center text-[#00df9a]/80 hover:text-[#00df9a]"
+        >
+          <ChevronDownIcon className="h-4 w-4" />
+        </button>
+        <ScreenChat compact translucent chatPublic={chatPublic} />
+      </div>
+    );
+  }
 
   if (isMobile) {
     return (

@@ -34,12 +34,18 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
         tiltMaxAngleY={30}
         glareColor="#9fbdb1"
       >
-        <div className="bg-tertiary w-full rounded-2xl p-5 sm:w-[300px]">
-          <div className="relative h-[230px] w-full">
+        <div className="bg-tertiary w-full rounded-2xl p-5 sm:w-[380px]">
+          {/* aspect-[3/2] (not a fixed height): a landscape box close to
+              these projects' own screenshot ratios (~1.2-1.4:1, checked
+              directly against the source images) so object-contain -- full
+              image always visible, never cropped, unlike object-cover --
+              only letterboxes a little rather than shrinking the image
+              down inside a much-too-tall box. */}
+          <div className="relative aspect-[3/2] w-full">
             <img
               src={image}
               alt={name}
-              className="h-full w-full rounded-2xl object-cover"
+              className="h-full w-full rounded-2xl object-contain"
             />
             <div className="absolute inset-0 m-3 flex justify-end gap-2 opacity-0 transition-opacity duration-300 hover:opacity-100">
               {liveLink && (

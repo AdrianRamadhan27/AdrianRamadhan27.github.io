@@ -1,17 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AvatarCanvas, { type AvatarController } from "./Avatar";
 import SpeechBubble from "../chat/SpeechBubble";
 import ChatInputBar from "../chat/ChatInputBar";
+import { ChatBubbleIcon, ChevronDownIcon } from "../chat/dockIcons";
 import { useChatSession } from "../../hooks/useChatSession";
 import { useContent } from "../../hooks/useContent";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import {
-  isBrowserTTSAvailable,
-  speakWithBrowserTTS,
-  synthesizeSpeech,
-} from "../../lib/voiceClient";
-import { LipsyncDriver } from "../../lib/lipsync";
+import { isBrowserTTSAvailable, speakWithBrowserTTS, streamSpeech } from "../../lib/voiceClient";
+import { AudioStreamPlayer } from "../../lib/audioStreamPlayer";
 import type { GestureName } from "../../lib/gestureTags";
 
 // Matches Computers.tsx's own breakpoint: below this, a percentage/`h-full`
@@ -26,26 +23,64 @@ const MOBILE_BREAKPOINT_PX = 640;
 // beside the canvas in ordinary React DOM, which is exactly why this
 // component (rather than something inside the Canvas) is the right place to
 // read useContent() and own the chat/voice state machine.
-const AvatarExperience = () => {
+//
+// No microphone: voice here is TTS-only (the avatar speaks its replies).
+// Typed input is the only way to ask it something.
+//
+// `docked`: true once Hero.tsx's IntersectionObserver reports the hero
+// section has been scrolled fully out of view -- the whole thing then
+// switches to a small fixed bottom-right "assistant" widget instead of its
+// normal in-hero layout, so the avatar/chat stays reachable while browsing
+// the rest of the page. The chat session itself (useChatSession below)
+// doesn't care either way -- only the surrounding layout branches on it --
+// so conversation state survives the transition even though the 3D canvas
+// itself remounts crossing that boundary (different wrapper sizing between
+// the docked/undocked layouts means React can't reconcile it as the same
+// node; the GLB is drei-cached so this is a quick re-parse, not a refetch,
+// and only the avatar's pose/animation state, not the conversation, resets).
+const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
   const { chatPublic } = useContent();
   const isMobile = useIsMobile(MOBILE_BREAKPOINT_PX);
   const avatarRef = useRef<AvatarController>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const lipsyncRef = useRef<LipsyncDriver | null>(null);
+  const playerRef = useRef<AudioStreamPlayer | null>(null);
   const rafRef = useRef<number | undefined>(undefined);
   const audioUnlockedRef = useRef(false);
+  const greetingSpokenRef = useRef(false);
+  // Browser-TTS-fallback-only mouth level (see speak()'s catch branch) --
+  // that path has no real audio in playerRef to read an amplitude off of
+  // (browser SpeechSynthesis never reaches the Web Audio graph at all), so
+  // it instead pokes a value in here on each word-boundary event, which
+  // the rAF loop below reads AND decays every frame. usingFallbackRef
+  // tells that loop which source to trust: without it, the loop's own
+  // unconditional playerRef.current.read() call -- reading real silence,
+  // since nothing is actually playing through that player during fallback
+  // -- would overwrite this value right back to 0 almost every other
+  // frame, which is exactly why the mouth previously stayed shut through
+  // the fallback path even though the browser was audibly speaking.
+  const fallbackMouthRef = useRef(0);
+  const usingFallbackRef = useRef(false);
+  // Docked-widget-only: collapses the whole thing down to a small circular
+  // reopen button. Meaningless (unread) outside the `docked` branch below.
+  const [minimized, setMinimized] = useState(false);
 
-  useEffect(() => {
-    if (audioRef.current) lipsyncRef.current = new LipsyncDriver(audioRef.current);
-  }, []);
+  if (!playerRef.current) playerRef.current = new AudioStreamPlayer();
 
   // Drives mouthOpen every animation frame from whatever's currently
-  // playing through the shared <audio> element. Runs continuously (cheap
-  // when nothing is playing -- read() returns 0) rather than only while
+  // streaming through the PCM player. Runs continuously (cheap when
+  // nothing is playing -- read() returns 0) rather than only while
   // speaking, so it doesn't need its own start/stop lifecycle.
   useEffect(() => {
     const tick = () => {
-      avatarRef.current?.setMouthOpen(lipsyncRef.current?.read() ?? 0);
+      if (usingFallbackRef.current) {
+        avatarRef.current?.setMouthOpen(fallbackMouthRef.current);
+        // Decays each frame so a word-boundary poke reads as a brief
+        // flap-then-settle instead of a held-open mouth -- ~70ms
+        // half-life at 60fps, independent of Avatar.tsx's own lerp
+        // smoothing on top of whatever value this hands it.
+        fallbackMouthRef.current *= 0.85;
+      } else {
+        avatarRef.current?.setMouthOpen(playerRef.current?.read() ?? 0);
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -54,63 +89,77 @@ const AvatarExperience = () => {
     };
   }, []);
 
-  // "Unlocks" the shared <audio> element under a genuine, synchronous user
-  // gesture -- by the time speak() below actually calls .play(), several
-  // seconds of network + typewriter-reveal time have usually passed, well
-  // outside the gesture window browsers require for autoplay. A media
-  // element that has ONCE played (even silently) under a real gesture stays
-  // eligible for programmatic play() afterward, which is what this trades
-  // on. Wired to fire on the first pointer/keyboard interaction anywhere in
-  // this component (typing, clicking Send, clicking the mic) rather than
-  // threading a callback through every input control individually.
+  // Readies the AudioContext + AudioWorklet under a genuine, synchronous
+  // user gesture -- by the time speak() below actually starts pushing
+  // audio, several seconds of network + typewriter-reveal time have
+  // usually passed, well outside the gesture window browsers require for
+  // autoplay. Wired to fire on the first pointer/keyboard interaction
+  // anywhere in this component (typing, clicking Send) rather than
+  // threading a callback through the input control individually.
+  //
+  // Also where the greeting gets spoken, for the same reason it's not
+  // spoken on load: the browser blocks audio (and AudioContext.resume())
+  // until a real user gesture, so however much visitors might want to
+  // hear it immediately, it physically can't play before their first
+  // interaction. Speaking it here means it plays as soon as that gesture
+  // happens -- typically clicking/tapping into the input, which precedes
+  // actually typing a question by at least a moment.
+  //
+  // revealGreeting() is called in the same breath rather than on mount
+  // (see holdGreeting passed to useChatSession below) -- with voice
+  // enabled, the greeting bubble stays empty until this exact moment, so
+  // its typewriter reveal and its TTS start together instead of the text
+  // finishing its whole animation in silence well before audio's even
+  // allowed to play.
   const unlockAudio = () => {
     if (audioUnlockedRef.current) return;
-    const el = audioRef.current;
-    if (!el) return;
-    lipsyncRef.current?.ensureContext();
-    el.muted = true;
-    el.play()
-      .then(() => el.pause())
-      .catch(() => {
-        /* some browsers reject even a muted priming play(); harmless either way */
-      })
-      .finally(() => {
-        el.muted = false;
-      });
     audioUnlockedRef.current = true;
+    void playerRef.current?.ensureReady();
+    if (!greetingSpokenRef.current && chatPublic.greeting.trim()) {
+      greetingSpokenRef.current = true;
+      revealGreeting();
+      void speak(chatPublic.greeting);
+    }
   };
 
   const speak = async (text: string) => {
     if (!chatPublic.voiceEnabled || !text.trim()) return;
-    const el = audioRef.current;
+    const player = playerRef.current;
     avatarRef.current?.setSpeaking(true);
     try {
-      if (el) {
-        el.pause();
-        el.currentTime = 0;
-        const blob = await synthesizeSpeech(text);
-        const url = URL.createObjectURL(blob);
-        el.src = url;
-        await el.play();
-        await new Promise<void>((resolve) => {
-          el.onended = () => resolve();
-        });
-        URL.revokeObjectURL(url);
+      if (player) {
+        player.stop();
+        await player.ensureReady();
+        await streamSpeech(text, (bytes) => player.pushBytes(bytes));
+        // The network stream being fully read doesn't mean playback is
+        // done -- audio is scheduled ahead into the future as chunks
+        // arrive, and the very last fraction of a second is deliberately
+        // held back by every scheduling pass except the final one (see
+        // audioStreamPlayer.ts's class-level comment on why). finish()
+        // triggers that final pass so the tail of the reply actually gets
+        // scheduled and played, instead of always being cut a beat short.
+        player.finish();
         return;
       }
-      throw new Error("No audio element available.");
+      throw new Error("No audio player available.");
     } catch {
       // Fall back to browser TTS -- can't be lip-synced (its audio output
       // never reaches the Web Audio graph, verified while planning this),
       // so approximate the mouth flap from word-boundary events instead of
-      // leaving it frozen while still audibly speaking.
+      // leaving it frozen while still audibly speaking. usingFallbackRef
+      // tells the rAF loop above to read fallbackMouthRef instead of the
+      // (silent, during this path) real audio player.
       if (isBrowserTTSAvailable()) {
+        usingFallbackRef.current = true;
         try {
           await speakWithBrowserTTS(text, () => {
-            avatarRef.current?.setMouthOpen(0.3 + Math.random() * 0.4);
+            fallbackMouthRef.current = 0.3 + Math.random() * 0.4;
           });
         } catch {
           /* both paths failed -- the reply is still visible in the bubble */
+        } finally {
+          usingFallbackRef.current = false;
+          fallbackMouthRef.current = 0;
         }
       }
     } finally {
@@ -123,12 +172,17 @@ const AvatarExperience = () => {
     avatarRef.current?.triggerGesture(name);
   };
 
-  const { messages, busy, error, send } = useChatSession({
+  const { messages, busy, error, send, revealGreeting } = useChatSession({
     greeting: chatPublic.greeting,
     onGesture: handleGesture,
     onReplyDone: (fullText) => {
       void speak(fullText);
     },
+    // Only worth holding back when voice is actually enabled -- if it's
+    // not, TTS never plays for anything (see speak()'s own early return),
+    // so delaying the greeting would just be pointless friction with no
+    // payoff.
+    holdGreeting: chatPublic.voiceEnabled,
   });
 
   const handleSend = (text: string) => {
@@ -164,12 +218,79 @@ const AvatarExperience = () => {
     );
   }
 
-  const chatInput = (
-    <ChatInputBar onSend={handleSend} disabled={busy} voiceEnabled={chatPublic.voiceEnabled} />
-  );
-  // Synthesized speech has no track to caption; the reply text itself is
-  // the visible transcript via SpeechBubble.
-  const audioEl = <audio ref={audioRef} className="hidden" />;
+  const chatInput = <ChatInputBar onSend={handleSend} disabled={busy} />;
+  const bubble = <SpeechBubble text={lastAssistant?.content ?? ""} busy={busy} error={error} />;
+
+  if (docked) {
+    if (minimized) {
+      return (
+        <button
+          type="button"
+          onClick={() => setMinimized(false)}
+          aria-label="Open chat"
+          className="bg-accent hover:bg-accent-dim fixed bottom-8 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-black shadow-xl transition-transform hover:scale-105"
+        >
+          <ChatBubbleIcon className="h-6 w-6" />
+        </button>
+      );
+    }
+    return (
+      // bottom-8, not bottom-4: raised enough to clear the footer's own
+      // bottom-right content once scrolled all the way down (this widget
+      // is position:fixed, so it stays in the same viewport corner
+      // regardless of how far the page itself has scrolled). max-h-[75vh]
+      // is a hard ceiling on the whole widget; the actual growth problem
+      // (a long reply making the widget itself very tall) is solved one
+      // level down -- the bubble gets its own max-height + scroll below --
+      // so the avatar crop and input stay fixed-size and always reachable
+      // rather than being pushed off or scrolling away with a long reply.
+      <div
+        className="border-accent/30 bg-tertiary/40 animate-pop fixed bottom-8 right-4 z-40 flex max-h-[75vh] w-64 flex-col gap-2 rounded-2xl border p-3 pt-8 shadow-xl backdrop-blur-md sm:w-72"
+        onPointerDownCapture={unlockAudio}
+        onKeyDownCapture={unlockAudio}
+      >
+        <button
+          type="button"
+          onClick={() => setMinimized(true)}
+          aria-label="Minimize chat"
+          className="text-secondary hover:text-accent absolute right-2 top-2 flex h-6 w-6 items-center justify-center"
+        >
+          <ChevronDownIcon className="h-4 w-4" />
+        </button>
+
+        <div className="flex w-full items-end justify-end gap-2">
+          <div className="max-h-40 overflow-y-auto">{bubble}</div>
+          {/* Half-body crop. drei's Bounds fits a perspective camera using
+              a SINGLE scalar (the object's largest bounding-box axis --
+              standing height, here) checked against both the vertical AND
+              horizontal FOV, so a narrow/tall canvas backs the camera off
+              far enough that the (narrow) horizontal FOV also clears that
+              same height-sized "diameter" too -- the object ends up
+              shrunk, not just cropped, on anything narrower than square
+              (verified empirically: a naively taller-than-wide inner
+              canvas rendered the figure as a tiny speck, not a filled
+              crop). A SQUARE inner canvas avoids that penalty entirely
+              (fills to its height, Bounds' width check is then a no-op)
+              and is fixed-pixel rather than percentage-based so it doesn't
+              inherit the portrait wrapper's own (non-square) aspect ratio.
+              Centered horizontally and pinned to the wrapper's top edge,
+              so the portrait overflow-hidden wrapper crops the square's
+              excess width evenly off both sides and its excess height
+              off only the bottom -- i.e. the legs, not the head. */}
+          <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-24">
+            <div className="absolute left-1/2 top-0 h-[220px] w-[220px] -translate-x-1/2 sm:h-[260px] sm:w-[260px]">
+              <AvatarCanvas
+                ref={avatarRef}
+                avatarUrl={chatPublic.avatarUrl}
+                className="h-full w-full"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="w-full shrink-0">{chatInput}</div>
+      </div>
+    );
+  }
 
   if (isMobile) {
     // Normal-flow stack, not absolute overlays -- min-h-screen (the hero
@@ -183,11 +304,10 @@ const AvatarExperience = () => {
         onPointerDownCapture={unlockAudio}
         onKeyDownCapture={unlockAudio}
       >
-        <div className="h-[42vh] max-h-[360px] w-full max-w-md overflow-hidden rounded-2xl">
+        <div className="animate-pop h-[46vh] max-h-[390px] w-full max-w-md overflow-hidden rounded-2xl">
           <AvatarCanvas ref={avatarRef} avatarUrl={chatPublic.avatarUrl} className="h-full w-full" />
         </div>
-        {audioEl}
-        <SpeechBubble text={lastAssistant?.content ?? ""} busy={busy} error={error} />
+        <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{bubble}</div>
         <div className="w-full max-w-md">{chatInput}</div>
       </div>
     );
@@ -205,28 +325,33 @@ const AvatarExperience = () => {
           the top-left; a full-size, auto-centered avatar sat directly
           behind/under it. z-0 makes stacking explicit rather than relying
           on default paint order, matching the z-10 convention Hero.tsx
-          already uses for its own text-over-canvas overlay. */}
-      {/* bottom-[18%], not bottom-0: leaves the canvas's own bounding box
-          (which extends well below the rendered figure -- Bounds frames
-          with margin, so there's transparent canvas space beneath the
-          feet) clear of the input bar's strip entirely, rather than
-          trusting z-index alone against a transparent-but-still-hit-
-          testable canvas element sitting under it. */}
+          already uses for its own text-over-canvas overlay. bottom-[18%],
+          not bottom-0: leaves the canvas's own bounding box (which extends
+          well below the rendered figure -- Bounds frames with margin, so
+          there's transparent canvas space beneath the feet) clear of the
+          bubble/input strip entirely, rather than trusting z-index alone
+          against a transparent-but-still-hit-testable canvas underneath. */}
       <AvatarCanvas
         ref={avatarRef}
         avatarUrl={chatPublic.avatarUrl}
-        className="absolute bottom-[18%] right-0 z-0 h-[55%] w-[70%] sm:h-[62%] sm:w-[42%] lg:w-[36%]"
+        className="animate-pop absolute bottom-[28%] right-0 z-0 h-[58%] w-[74%] sm:h-[66%] sm:w-[45%] lg:h-[50%] lg:w-[39%] lg:bottom-[16%]"
       />
-      {audioEl}
 
-      <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center px-4 sm:top-10">
-        <div className="pointer-events-auto">
-          <SpeechBubble text={lastAssistant?.content ?? ""} busy={busy} error={error} />
-        </div>
-      </div>
-
-      <div className="absolute inset-x-0 bottom-4 z-10 px-4 sm:bottom-10 sm:px-12">
-        <div className="mx-auto max-w-md">{chatInput}</div>
+      {/* Bubble sits directly above the input bar, both anchored to the
+          bottom -- moved off the top of the hero (which used to compete
+          visually with the "Hi, I'm ..." heading there) and next to the
+          control the visitor is actually looking at while reading a reply.
+          This whole strip is bottom-anchored and grows UPWARD as content
+          grows, so a long reply with no height cap would eventually reach
+          up into that heading again -- same class of bug the floating
+          docked widget had (see AvatarExperience's docked branch above),
+          just with the hero heading in place of the footer as what it'd
+          block. max-h-[30vh]+overflow-y-auto on the bubble itself caps
+          that growth and makes it scrollable instead, while leaving the
+          avatar crop and input bar below it fixed-size and undisturbed. */}
+      <div className="absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-3 px-4 sm:bottom-10 sm:px-12">
+        <div className="max-h-[30vh] overflow-y-auto">{bubble}</div>
+        <div className="w-full max-w-md">{chatInput}</div>
       </div>
     </div>
   );

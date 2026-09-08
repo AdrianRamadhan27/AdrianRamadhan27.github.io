@@ -1,9 +1,32 @@
 // Public endpoint. Streams a chat completion from whatever OpenAI-compatible
 // provider is configured in chat_settings/chat_secrets — the client never
 // sees the base URL, API key, or system prompt directly.
+//
+// Tool-calling, not a full context dump: the system prompt only carries a
+// compact DIRECTORY of experience/project titles + their index -- full
+// details (bullet points, descriptions, links) are fetched on demand via
+// get_experience(index)/get_project(index) tool calls (Python-style
+// negative indices supported: get_project(-1) is the most recent project).
+// Previously every experience's full points and every project's full
+// description were inlined into the system prompt on EVERY request
+// regardless of whether the question needed any of it -- a large prefill
+// the model has to process before producing a first token, on every single
+// message. Most questions ("what's your name", "are you free to chat")
+// need none of that detail at all; the ones that do trigger one or two
+// small, fast tool round-trips instead of paying that cost unconditionally.
+// See toolLoop.ts for the actual SSE-parsing/round-trip orchestration
+// (factored out specifically so it has no Deno-specific imports and can be
+// exercised directly by a plain Node test script).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, handleOptions } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import {
+  callUpstream,
+  continueChatCompletion,
+  pickByIndex,
+  type ToolDefinition,
+  type UpstreamMessage,
+} from "./toolLoop.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -16,13 +39,51 @@ const RATE_LIMIT_MAX_REQUESTS = 10;
 
 type ClientMessage = { role: "user" | "assistant"; content: string };
 
-// Builds the factual half of the system message from the content tables
-// themselves, so chat_settings.system_prompt only ever has to say HOW to
-// respond -- tone, boundaries, what to do with off-topic questions -- and
-// never has to be hand-edited every time a project or skill changes. This
-// runs on every request rather than being cached, trading a few extra ms
-// for the CMS content always being current.
-function buildContextBlock(
+const TOOLS: ToolDefinition[] = [
+  {
+    type: "function",
+    function: {
+      name: "get_experience",
+      description:
+        "Fetch full details (all bullet points) for ONE work-experience entry from the Experience directory listed in the system prompt, by its index. Call this before answering anything that needs specifics beyond the title/company/date already shown there. Negative indices count from the end (-1 = the most recent/last entry).",
+      parameters: {
+        type: "object",
+        properties: {
+          index: {
+            type: "integer",
+            description:
+              "0-based index from the Experience directory, or negative to count from the end (-1 = last).",
+          },
+        },
+        required: ["index"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_project",
+      description:
+        "Fetch full details (description, tags, links) for ONE project from the Projects directory listed in the system prompt, by its index. Call this before answering anything that needs specifics beyond the name already shown there. Negative indices count from the end (-1 = the most recent/last entry).",
+      parameters: {
+        type: "object",
+        properties: {
+          index: {
+            type: "integer",
+            description:
+              "0-based index from the Projects directory, or negative to count from the end (-1 = last).",
+          },
+        },
+        required: ["index"],
+      },
+    },
+  },
+];
+
+// The compact half of the system message -- profile/skills stay inlined
+// (already small), experiences/projects are listed as a directory only
+// (index + the one identifying line), full detail comes from a tool call.
+function buildDirectoryBlock(
   profile: Record<string, unknown> | null,
   experiences: Record<string, unknown>[],
   projects: Record<string, unknown>[],
@@ -53,29 +114,75 @@ function buildContextBlock(
   }
 
   if (experiences.length > 0) {
-    lines.push("", "Experience:");
-    for (const e of experiences) {
-      lines.push(`- ${e.title} at ${e.company_name} (${e.date_label})`);
-      for (const point of (e.points as string[] | null) ?? []) {
-        lines.push(`  • ${point}`);
-      }
-    }
+    lines.push(
+      "",
+      "Experience directory (call get_experience(index) for full bullet points on any entry; -1 = most recent):"
+    );
+    experiences.forEach((e, i) => {
+      lines.push(`[${i}] ${e.title} at ${e.company_name} (${e.date_label})`);
+    });
   }
 
   if (projects.length > 0) {
-    lines.push("", "Projects:");
-    for (const p of projects) {
-      const tags = ((p.tags as { name: string }[] | null) ?? [])
-        .map((t) => t.name)
-        .join(", ");
-      const live = p.live_link ? ` (live: ${p.live_link})` : "";
-      lines.push(
-        `- ${p.name}: ${p.description}${tags ? ` [${tags}]` : ""}${live}`
-      );
-    }
+    lines.push(
+      "",
+      "Projects directory (call get_project(index) for description/tags/links on any entry; -1 = most recent):"
+    );
+    projects.forEach((p, i) => {
+      lines.push(`[${i}] ${p.name}`);
+    });
   }
 
   return lines.join("\n").trim();
+}
+
+function executeTool(
+  name: string,
+  argsJson: string,
+  experiences: Record<string, unknown>[],
+  projects: Record<string, unknown>[]
+): string {
+  let args: { index?: number } = {};
+  try {
+    args = JSON.parse(argsJson || "{}");
+  } catch {
+    // fall through with empty args -- reported as an out-of-range error below
+  }
+  const index = typeof args.index === "number" ? args.index : NaN;
+
+  if (name === "get_experience") {
+    const e = pickByIndex(experiences, index);
+    if (!e) {
+      return JSON.stringify({
+        error: `No experience at index ${args.index}. Valid indices: 0 to ${experiences.length - 1} (or -1 to -${experiences.length}).`,
+      });
+    }
+    return JSON.stringify({
+      title: e.title,
+      company: e.company_name,
+      date: e.date_label,
+      points: e.points ?? [],
+    });
+  }
+
+  if (name === "get_project") {
+    const p = pickByIndex(projects, index);
+    if (!p) {
+      return JSON.stringify({
+        error: `No project at index ${args.index}. Valid indices: 0 to ${projects.length - 1} (or -1 to -${projects.length}).`,
+      });
+    }
+    const tags = ((p.tags as { name: string }[] | null) ?? []).map((t) => t.name);
+    return JSON.stringify({
+      name: p.name,
+      description: p.description,
+      tags,
+      live_link: p.live_link ?? null,
+      source_code_link: p.source_code_link ?? null,
+    });
+  }
+
+  return JSON.stringify({ error: `Unknown tool: ${name}` });
 }
 
 Deno.serve(async (req) => {
@@ -109,7 +216,7 @@ Deno.serve(async (req) => {
   // --- settings + secret + everything the model should know about Adrian ---
   // Fetched alongside settings/secret rather than gated behind them so one
   // Promise.all covers the whole request; content-table failures degrade to
-  // an empty context block (buildContextBlock treats missing data as
+  // an empty directory block (buildDirectoryBlock treats missing data as
   // "nothing to add") rather than failing the whole chat.
   const [
     { data: settings },
@@ -160,20 +267,18 @@ Deno.serve(async (req) => {
       content: String(m.content ?? "").slice(0, MAX_MESSAGE_CHARS),
     }));
 
+  const experiencesArr = experiences ?? [];
+  const projectsArr = projects ?? [];
+
   // Merged into ONE system message rather than two -- several
   // OpenAI-compatible providers only honor the first "system" role message
   // in the array, so a separate context message would silently be ignored
   // by some of them. settings.system_prompt (edited in the CMS) stays pure
-  // behavioral instruction; the context block underneath is assembled fresh
-  // from the content tables on every request.
-  const contextBlock = buildContextBlock(
-    profile,
-    experiences ?? [],
-    projects ?? [],
-    skills ?? []
-  );
-  let systemContent = contextBlock
-    ? `${settings.system_prompt}\n\n---\nReference information about the portfolio owner. Use this to answer questions; do not invent facts that aren't listed here:\n${contextBlock}`
+  // behavioral instruction; the directory block underneath is assembled
+  // fresh from the content tables on every request.
+  const directoryBlock = buildDirectoryBlock(profile, experiencesArr, projectsArr, skills ?? []);
+  let systemContent = directoryBlock
+    ? `${settings.system_prompt}\n\n---\nReference information about the portfolio owner. Use this to answer questions; do not invent facts that aren't listed here. Full experience/project details aren't inlined below -- call the get_experience/get_project tools for those:\n${directoryBlock}`
     : settings.system_prompt;
 
   // Avatar hero mode only: the 3D avatar can perform a few body gestures,
@@ -185,41 +290,68 @@ Deno.serve(async (req) => {
     systemContent += `\n\n---\nYou are embodied as an animated 3D avatar. When a reply calls for a body gesture, include exactly one inline tag anywhere in your reply: [gesture:wave] to wave hello/goodbye, [gesture:jumping_jacks] if asked to do jumping jacks or exercise, [gesture:dance] if asked to dance or celebrate. Only use these three exact tag names, only when it genuinely fits, and don't mention the tag itself in your words.`;
   }
 
-  const messages = [
-    { role: "system", content: systemContent },
-    ...history,
-  ];
+  const messages: UpstreamMessage[] = [{ role: "system", content: systemContent }, ...history];
 
   const maxTokens = Math.min(settings.max_tokens ?? 400, MAX_TOKENS_CEILING);
+  const url = `${settings.base_url.replace(/\/$/, "")}/chat/completions`;
+  const temperature = settings.temperature ?? 0.7;
 
-  // --- call the provider and stream its SSE response straight back ---
-  const upstream = await fetch(
-    `${settings.base_url.replace(/\/$/, "")}/chat/completions`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${secret.api_key}`,
-      },
-      body: JSON.stringify({
-        model: settings.model,
-        messages,
-        temperature: settings.temperature ?? 0.7,
-        max_tokens: maxTokens,
-        stream: true,
-      }),
-    }
-  );
+  // --- first upstream call happens here, BEFORE the client-facing Response
+  // exists -- so if it fails (bad key, bad model, provider down), this can
+  // still report a clean non-200 JSON error exactly like the pre-tool-
+  // calling version did. Only failures on LATER rounds (after streaming has
+  // already committed to a 200) fall back to just stopping quietly --
+  // see toolLoop.ts's doc comment on continueChatCompletion.
+  const first = await callUpstream(fetch, url, secret.api_key, {
+    model: settings.model,
+    messages,
+    temperature,
+    max_tokens: maxTokens,
+    tools: TOOLS,
+    tool_choice: "auto",
+  });
 
-  if (!upstream.ok || !upstream.body) {
-    const text = await upstream.text().catch(() => "");
+  if (!first.ok) {
     return new Response(
-      JSON.stringify({ error: "Upstream provider error.", detail: text.slice(0, 500) }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Upstream provider error.", detail: first.detail }),
+      { status: first.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
-  return new Response(upstream.body, {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        await continueChatCompletion({
+          fetchImpl: fetch,
+          url,
+          apiKey: secret.api_key,
+          model: settings.model,
+          temperature,
+          maxTokens,
+          tools: TOOLS,
+          executeTool: (name, argsJson) => executeTool(name, argsJson, experiencesArr, projectsArr),
+          onContentChunk: (text) => {
+            const frame = `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
+            controller.enqueue(encoder.encode(frame));
+          },
+          messages,
+          firstResponse: first.response,
+          firstUsedTools: first.usedTools,
+        });
+      } catch {
+        // Best-effort -- an upstream network hiccup mid-stream just ends
+        // the reply early rather than crashing the function; the client's
+        // own empty-response handling (chatClient.ts) covers the case
+        // where nothing was ever sent.
+      } finally {
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
     headers: {
       ...corsHeaders,
       "Content-Type": "text/event-stream",

@@ -17,12 +17,27 @@ export type UseChatSessionOptions = {
   onGesture?: (name: GestureName) => void;
   /** Called once a reply has finished revealing, with the full text --
    *  the avatar hero uses this to kick off TTS synthesis. Not called for
-   *  the initial greeting (autoplay would be blocked without a user
-   *  gesture, and speaking on load would be jarring anyway). */
+   *  the initial greeting -- see holdGreeting/revealGreeting below, which
+   *  the avatar hero uses to speak it instead. */
   onReplyDone?: (fullText: string) => void;
+  /** When true, the greeting is NOT typed out automatically on mount --
+   *  the caller must call the returned revealGreeting() when it wants it
+   *  to actually appear. The avatar hero passes this (when voice is
+   *  enabled) so the greeting bubble stays empty until the visitor's
+   *  first gesture, at which point it reveals in step with the greeting's
+   *  TTS starting instead of finishing its whole typing animation in
+   *  silence well before audio is even allowed to play. ScreenChat (no
+   *  TTS at all) never sets this -- the greeting there still just appears
+   *  immediately like before. */
+  holdGreeting?: boolean;
 };
 
-export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSessionOptions) {
+export function useChatSession({
+  greeting,
+  onGesture,
+  onReplyDone,
+  holdGreeting = false,
+}: UseChatSessionOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +89,10 @@ export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSess
     };
   }, []);
 
-  useEffect(() => {
+  // Extracted so it can run either automatically (below) or manually, on
+  // demand, via the returned revealGreeting -- see holdGreeting's doc
+  // comment above for why the avatar hero needs the manual path.
+  const revealGreeting = useCallback(() => {
     if (!greeting) return;
     typerRef.current?.cancel();
     setMessagesAndRef([{ role: "assistant", content: "" }]);
@@ -85,6 +103,11 @@ export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSess
     typer.push(greeting);
     typer.finish();
   }, [greeting, setMessagesAndRef]);
+
+  useEffect(() => {
+    if (holdGreeting) return;
+    revealGreeting();
+  }, [holdGreeting, revealGreeting]);
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
@@ -138,11 +161,17 @@ export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSess
         fullText += rest;
         typer.push(rest);
       }
+      // Fired as soon as the network stream itself is done, NOT after the
+      // typewriter reveal finishes -- onReplyDone is what kicks off TTS
+      // (see AvatarExperience.speak()), and that already streams its own
+      // audio incrementally, so it should start synthesizing/playing
+      // alongside the reveal animation, not wait out the several extra
+      // seconds a long reply takes to finish typing out on screen first.
+      onReplyDoneRef.current?.(fullText);
       // Network stream is done, but the typewriter may still be catching
       // up (it reveals slower than chunks can arrive) -- keep `busy` true
       // until the reveal itself finishes, not just the network.
       await new Promise<void>((resolve) => typer.finish(resolve));
-      onReplyDoneRef.current?.(fullText);
     } catch (e) {
       typer.cancel();
       if (e instanceof DOMException && e.name === "AbortError") {
@@ -158,5 +187,5 @@ export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSess
     }
   }, [busy, setMessagesAndRef]);
 
-  return { messages, busy, error, send, cancel };
+  return { messages, busy, error, send, cancel, revealGreeting };
 }

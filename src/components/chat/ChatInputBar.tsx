@@ -1,19 +1,15 @@
 import { useState } from "react";
 
-import MicButton from "./MicButton";
-
-// Text input + mic, for the avatar hero (paired with SpeechBubble for the
-// reply side). Kept separate from ScreenChat's own input row since that
-// one's terminal-styled and lives inside drei's <Html> constraints; this
-// one is normal DOM with normal styling.
+// Text input, for the avatar hero (paired with SpeechBubble for the reply
+// side). Kept separate from ScreenChat's own input row since that one's
+// terminal-styled and lives inside drei's <Html> constraints; this one is
+// normal DOM with normal styling. No microphone -- text input only.
 const ChatInputBar = ({
   onSend,
   disabled,
-  voiceEnabled,
 }: {
   onSend: (text: string) => void;
   disabled?: boolean;
-  voiceEnabled: boolean;
 }) => {
   const [value, setValue] = useState("");
 
@@ -26,18 +22,6 @@ const ChatInputBar = ({
 
   return (
     <div className="flex items-center gap-2">
-      {voiceEnabled && (
-        <MicButton
-          disabled={disabled}
-          onTranscript={(text) => {
-            // Speak-to-send: a recognized transcript sends immediately
-            // rather than just filling the box, matching how voice
-            // assistants generally behave (typing is the "review before
-            // sending" path; talking is the "just ask" path).
-            onSend(text);
-          }}
-        />
-      )}
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -50,9 +34,23 @@ const ChatInputBar = ({
         type="button"
         onClick={submit}
         disabled={disabled}
-        className="bg-accent hover:bg-accent-dim rounded-full px-4 py-2 text-[13px] font-bold text-black transition-colors disabled:opacity-40"
+        aria-label="Send"
+        className="bg-accent hover:bg-accent-dim flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black transition-colors disabled:opacity-40"
       >
-        Send
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          className="ml-[-1px] h-4 w-4"
+          aria-hidden="true"
+        >
+          <path
+            d="M3 11.5L20 4L12.5 21L10.5 13.5L3 11.5Z"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinejoin="round"
+            fill="currentColor"
+          />
+        </svg>
       </button>
     </div>
   );

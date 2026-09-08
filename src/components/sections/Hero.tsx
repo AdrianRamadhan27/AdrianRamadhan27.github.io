@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import { styles } from "../../constants/styles";
 import { ComputersCanvas, AvatarExperience } from "../canvas";
@@ -8,6 +8,28 @@ import CvModal from "../ui/CvModal";
 const Hero = () => {
   const { profile, loading, chatPublic } = useContent();
   const [cvOpen, setCvOpen] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  // True once this section has scrolled fully out of view -- flips the
+  // avatar/computer + chat UI from its normal in-hero layout to a small
+  // fixed bottom-right "assistant" widget (see the `docked` prop on
+  // AvatarExperience/ComputersCanvas) so it stays reachable while browsing
+  // the rest of the page, then reverts once the visitor scrolls back up.
+  // IntersectionObserver over a scroll listener: cheaper (no per-scroll-
+  // event JS at all, the browser only calls back on actual visibility
+  // transitions) and threshold 0 means "docked" flips true only once ZERO
+  // pixels of the hero remain on screen, matching "scroll past" literally
+  // rather than as soon as it starts leaving.
+  const [docked, setDocked] = useState(false);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => setDocked(!entry.isIntersecting), {
+      threshold: 0,
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // min-h-screen alone lets mobile content (text + stacked chat panel) grow
   // taller than one viewport, but r3f's Canvas sizes itself via CSS
@@ -15,7 +37,7 @@ const Hero = () => {
   // doesn't count, so at sm+ (where the canvas actually renders) this
   // reverts to a fixed h-screen or the canvas collapses/mispositions.
   return (
-    <section className={`relative mx-auto min-h-screen w-full sm:h-screen`}>
+    <section ref={sectionRef} className={`relative mx-auto min-h-screen w-full sm:h-screen`}>
       {/* Below the sm breakpoint there is no 3D canvas at all (see
           ComputersCanvas) -- just a normal-flow chat panel underneath, so
           this block is normal-flow too (pt-28 clears the fixed navbar) and
@@ -86,7 +108,11 @@ const Hero = () => {
         </div>
       </div>
 
-      {chatPublic.heroVariant === "avatar" ? <AvatarExperience /> : <ComputersCanvas />}
+      {chatPublic.heroVariant === "avatar" ? (
+        <AvatarExperience docked={docked} />
+      ) : (
+        <ComputersCanvas docked={docked} />
+      )}
 
       {cvOpen && profile.cvUrl && (
         <CvModal url={profile.cvUrl} onClose={() => setCvOpen(false)} />
