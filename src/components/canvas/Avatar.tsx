@@ -130,6 +130,25 @@ function applyGesturePose(
     if (z !== undefined) bone.rotation.z = r.z + z;
   };
 
+  // This bundled avatar's bind pose (rest, 0 offset everywhere) is a
+  // T-pose -- arms out horizontal, as GLTF/FBX rigs almost always ship,
+  // since a natural standing pose is something an animation applies, never
+  // the raw skeleton. Applied unconditionally (not just when idle) so
+  // gestures below, which only touch Arm/ForeArm/leg/hip/spine bones,
+  // layer their own rotations on top of an already-natural shoulder
+  // baseline instead of the raw T-pose.
+  //
+  // Counter-intuitively the fix lives on the SHOULDER bone, not the Arm
+  // bone -- confirmed empirically (live bone inspection against the actual
+  // rig, not guessed): zeroing the Arm bone's own rest rotation left the
+  // T-pose completely unchanged, proving it contributes ~nothing to the
+  // visible silhouette. The Shoulder bone's rest X (~89 degrees) is what
+  // actually swings the arm out sideways; rotating it further past rest
+  // (rather than back toward 0, which swings the arm UP overhead instead)
+  // brings it down to a natural hang.
+  setLocal("LeftShoulder", deg(80), 0, 0);
+  setLocal("RightShoulder", deg(80), 0, 0);
+
   if (gesture === "wave") {
     // Ramp the arm up for the first 20% of the gesture, wave for the
     // middle, ease back down for the last 20% -- avoids a hard snap back

@@ -199,16 +199,33 @@ const AvatarExperience = () => {
       onPointerDownCapture={unlockAudio}
       onKeyDownCapture={unlockAudio}
     >
-      <AvatarCanvas ref={avatarRef} avatarUrl={chatPublic.avatarUrl} className="h-full w-full" />
+      {/* Anchored to the bottom-right corner and sized well under the full
+          hero, rather than filling it -- the hero heading ("Hi, I'm ...")
+          lives in a full-bleed overlay too (see Hero.tsx), left-aligned in
+          the top-left; a full-size, auto-centered avatar sat directly
+          behind/under it. z-0 makes stacking explicit rather than relying
+          on default paint order, matching the z-10 convention Hero.tsx
+          already uses for its own text-over-canvas overlay. */}
+      {/* bottom-[18%], not bottom-0: leaves the canvas's own bounding box
+          (which extends well below the rendered figure -- Bounds frames
+          with margin, so there's transparent canvas space beneath the
+          feet) clear of the input bar's strip entirely, rather than
+          trusting z-index alone against a transparent-but-still-hit-
+          testable canvas element sitting under it. */}
+      <AvatarCanvas
+        ref={avatarRef}
+        avatarUrl={chatPublic.avatarUrl}
+        className="absolute bottom-[18%] right-0 z-0 h-[55%] w-[70%] sm:h-[62%] sm:w-[42%] lg:w-[36%]"
+      />
       {audioEl}
 
-      <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center px-4 sm:top-10">
+      <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center px-4 sm:top-10">
         <div className="pointer-events-auto">
           <SpeechBubble text={lastAssistant?.content ?? ""} busy={busy} error={error} />
         </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-4 px-4 sm:bottom-10 sm:px-12">
+      <div className="absolute inset-x-0 bottom-4 z-10 px-4 sm:bottom-10 sm:px-12">
         <div className="mx-auto max-w-md">{chatInput}</div>
       </div>
     </div>
