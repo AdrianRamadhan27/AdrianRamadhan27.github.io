@@ -1,0 +1,25 @@
+model.glb
+=========
+
+Source: https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/readyplayer.me.glb
+License: MIT (three.js repository license — https://github.com/mrdoob/three.js/blob/dev/LICENSE)
+
+This is a sample avatar in Ready Player Me's export format, bundled by the
+three.js project as an example asset. Ready Player Me (the company/service)
+shut down in January 2026, but this previously-exported file is unaffected
+and freely redistributable under three.js's MIT license.
+
+It has no baked-in animations (Idle/Wave/Jumping Jacks etc. are driven
+procedurally in code — see src/components/canvas/Avatar.tsx — rather than
+from motion-capture clips, since re-targeting Mixamo animations onto this
+specific rig isn't something scriptable without interactive access to
+Mixamo's web-based auto-rigger).
+
+It carries two mouth morph targets (mouthOpen, mouthSmile) on the
+Wolf3D_Head mesh — used to drive lip sync from live TTS audio amplitude.
+This is a stock placeholder; swap in a personalized avatar at any time via
+the CMS (Chatbot tab → Hero → avatar upload). A replacement avatar should
+ideally keep the same bone names (Hips, Spine, Spine1, Spine2, Neck, Head,
+LeftArm, LeftForeArm, RightArm, RightForeArm, LeftUpLeg, RightUpLeg,
+LeftLeg, RightLeg) and a `mouthOpen` morph target for the procedural
+gestures and lip sync to keep working without code changes.
