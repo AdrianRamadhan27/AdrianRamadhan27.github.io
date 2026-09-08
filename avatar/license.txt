@@ -1,25 +1,67 @@
 model.glb
 =========
 
-Source: https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/readyplayer.me.glb
-License: MIT (three.js repository license — https://github.com/mrdoob/three.js/blob/dev/LICENSE)
+Source: https://poly.pizza/m/JFrLIKqvCH (a low-poly "suited character" pack)
+License: CC0 1.0 (public domain) -- confirmed directly against poly.pizza's
+own page data for this exact model ("license":"CC0 1.0"). Free to use,
+modify, and redistribute, no attribution required.
 
-This is a sample avatar in Ready Player Me's export format, bundled by the
-three.js project as an example asset. Ready Player Me (the company/service)
-shut down in January 2026, but this previously-exported file is unaffected
-and freely redistributable under three.js's MIT license.
+Ships 24 baked animation clips, verified directly against the file (GLTFLoader,
+gltf.animations) rather than eyeballed -- an earlier version of this doc said
+23 and only summarized the list, both wrong:
+Idle, Idle_Neutral, Idle_Gun, Idle_Gun_Pointing, Idle_Gun_Shoot, Idle_Sword,
+Wave, Walk, Run, Run_Back, Run_Left, Run_Right, Run_Shoot, Punch_Left,
+Punch_Right, Kick_Left, Kick_Right, Sword_Slash, Gun_Shoot, HitRecieve,
+HitRecieve_2, Roll, Interact, Death -- under a "CharacterArmature|<ClipName>"
+naming convention, played via drei's useAnimations in
+src/components/canvas/Avatar.tsx -- fuzzy-matched against gesture names,
+since a stock third-party asset's clip names can't be guaranteed to line up
+1:1 with this project's [gesture:wave] etc. tags. Punch_Left/Right,
+Kick_Left/Right, and Roll also double as an idle-fidget pool -- played
+randomly, one at a time, every several seconds while nothing else is going
+on, so standing around isn't perfectly inert (see AMBIENT_ACTION_KEYWORDS).
 
-It has no baked-in animations (Idle/Wave/Jumping Jacks etc. are driven
-procedurally in code — see src/components/canvas/Avatar.tsx — rather than
-from motion-capture clips, since re-targeting Mixamo animations onto this
-specific rig isn't something scriptable without interactive access to
-Mixamo's web-based auto-rigger).
+Uses a completely different bone-naming convention (UpperArm.L, Torso, an
+uppercase-less LowerLeg.R, etc.) than a Mixamo/RPM-style rig -- if this
+avatar is ever swapped for a fresh upload, Avatar.tsx's clip-based path
+only depends on animation clip NAMES existing on the new asset, not on any
+specific bone names, so most replacement rigs with their own baked
+animations should work without code changes. The procedural bone-rotation
+fallback (for a replacement avatar shipping NO animations at all) still
+depends on the original Mixamo/RPM bone names documented further down this
+file -- only relevant if you upload an avatar with no baked clips.
 
-It carries two mouth morph targets (mouthOpen, mouthSmile) on the
-Wolf3D_Head mesh — used to drive lip sync from live TTS audio amplitude.
-This is a stock placeholder; swap in a personalized avatar at any time via
-the CMS (Chatbot tab → Hero → avatar upload). A replacement avatar should
-ideally keep the same bone names (Hips, Spine, Spine1, Spine2, Neck, Head,
-LeftArm, LeftForeArm, RightArm, RightForeArm, LeftUpLeg, RightUpLeg,
-LeftLeg, RightLeg) and a `mouthOpen` morph target for the procedural
-gestures and lip sync to keep working without code changes.
+Mouth feedback: a code-created bar, not a morph target
+-------------------------------------------------------
+The source file has NO morph targets or mouth geometry at all -- the face
+is a single flat-shaded, low-poly surface with no lips, no inner-mouth
+cavity, nothing painted or modeled for a mouth. A "mouthOpen" morph target
+was attempted first (via @gltf-transform, displacing lower-face vertices)
+but abandoned: even once verified numerically to be applying correctly, it
+visually read as the neck/chin stretching, not a mouth opening -- because
+the mesh has no actual seam or cavity to reveal, only a continuous surface
+to distort. The file in this directory is the clean, unmodified original
+download; it carries no baked morph target.
+
+Instead, Avatar.tsx creates a small flat plane mesh entirely in code (the
+same flat-bar stylization already used for this character's eyebrows) and
+parents it directly to the Head bone -- thin when closed, growing taller
+with live TTS amplitude via src/lib/audioStreamPlayer.ts. Its local
+position and depth offset were derived by raycasting from the camera
+through the target screen position against the actual face mesh to find
+the real front-surface depth at that point, then nudging the bar just
+inside it (not tuned by eye with depth-testing disabled, which had
+initially made it render in front of the face regardless of actual depth
+-- correct-looking head-on but visibly detached/floating from any other
+angle, since it wasn't actually occluding/being occluded like a real
+surface feature would).
+
+Original bundled avatar (superseded)
+-------------------------------------
+Before this asset, the bundled default was a Ready Player Me-format sample
+from three.js's own repo (MIT-licensed) -- Mixamo/RPM bone names (Hips,
+Spine, LeftArm, RightArm, ...), real mouthOpen/mouthSmile morph targets,
+but zero baked animations, which is why Avatar.tsx originally drove
+gestures by rotating bones directly in code. That avatar and its bone
+names are still what the procedural fallback path targets if a future
+upload ships no animation clips of its own.
