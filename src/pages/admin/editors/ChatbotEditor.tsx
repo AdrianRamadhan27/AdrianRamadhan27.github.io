@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { supabase } from "../../../lib/supabase";
+import { supabase, publicAssetUrl } from "../../../lib/supabase";
+import { uploadAsset } from "../../../lib/uploadAsset";
 import {
   inputClass,
   labelClass,
@@ -8,6 +9,8 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "./shared";
+
+type HeroVariant = "computer" | "avatar";
 
 type SettingsRow = {
   base_url: string;
@@ -17,41 +20,97 @@ type SettingsRow = {
   temperature: number;
   max_tokens: number;
   enabled: boolean;
+  hero_variant: HeroVariant;
+  avatar_path: string | null;
+  voice_enabled: boolean;
+  voice_base_url: string;
+  tts_model: string;
+  tts_voice: string;
+  stt_model: string;
+};
+
+const EMPTY: SettingsRow = {
+  base_url: "",
+  model: "",
+  system_prompt: "",
+  greeting: "",
+  temperature: 0.7,
+  max_tokens: 400,
+  enabled: false,
+  hero_variant: "computer",
+  avatar_path: null,
+  voice_enabled: false,
+  voice_base_url: "https://openrouter.ai/api/v1",
+  tts_model: "",
+  tts_voice: "",
+  stt_model: "",
 };
 
 type CatalogModel = { model_id: string; display_name: string };
+type ModelKind = "chat" | "tts" | "stt";
 
 const MODEL_CACHE_KEY = "cms_model_catalog_cache_v1";
+const TTS_MODEL_CACHE_KEY = "cms_tts_catalog_cache_v1";
+const STT_MODEL_CACHE_KEY = "cms_stt_catalog_cache_v1";
+
+function loadCache(key: string): CatalogModel[] {
+  try {
+    const cached = localStorage.getItem(key);
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+}
 
 const ChatbotEditor = () => {
   const [settings, setSettings] = useState<SettingsRow | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [hasKey, setHasKey] = useState(false);
-  const [models, setModels] = useState<CatalogModel[]>(() => {
-    try {
-      const cached = localStorage.getItem(MODEL_CACHE_KEY);
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [voiceApiKeyInput, setVoiceApiKeyInput] = useState("");
+  const [hasVoiceKey, setHasVoiceKey] = useState(false);
+
+  const [models, setModels] = useState<CatalogModel[]>(() => loadCache(MODEL_CACHE_KEY));
+  const [ttsModels, setTtsModels] = useState<CatalogModel[]>(() => loadCache(TTS_MODEL_CACHE_KEY));
+  const [sttModels, setSttModels] = useState<CatalogModel[]>(() => loadCache(STT_MODEL_CACHE_KEY));
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState<ModelKind | null>(null);
+  const [testingVoice, setTestingVoice] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const testAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     (async () => {
       if (!supabase) return;
-      const [{ data: row }, { data: keyStatus }] = await Promise.all([
+      const [{ data: row }, { data: keyStatus }, { data: voiceKeyStatus }] = await Promise.all([
         supabase.from("chat_settings").select("*").eq("id", 1).maybeSingle(),
         supabase.rpc("has_chat_api_key"),
+        supabase.rpc("has_voice_api_key"),
       ]);
-      if (row) setSettings(row as SettingsRow);
+      // Spread over EMPTY rather than a bare cast: the voice/hero columns
+      // are newer additions -- a database that hasn't had the migration
+      // run yet returns rows without them, which would otherwise leave
+      // several controlled inputs with an undefined value.
+      if (row) setSettings({ ...EMPTY, ...(row as SettingsRow) });
       setHasKey(!!keyStatus);
+      setHasVoiceKey(!!voiceKeyStatus);
       setLoading(false);
     })();
   }, []);
+
+  const saveKey = async (field: "api_key" | "voice_api_key", value: string) => {
+    if (!supabase || !value.trim()) return true;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-chat-key`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ api_key: value.trim(), field }),
+    });
+    return res.ok;
+  };
 
   const handleSaveSettings = async () => {
     if (!supabase || !settings) return;
@@ -77,58 +136,107 @@ const ChatbotEditor = () => {
       return;
     }
 
-    if (updated) setSettings(updated as SettingsRow);
+    if (updated) setSettings({ ...EMPTY, ...(updated as SettingsRow) });
 
-    if (apiKeyInput.trim()) {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-chat-key`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ api_key: apiKeyInput.trim() }),
-        }
-      );
-      if (res.ok) {
-        setHasKey(true);
-        setApiKeyInput("");
-      }
+    if (apiKeyInput.trim() && (await saveKey("api_key", apiKeyInput))) {
+      setHasKey(true);
+      setApiKeyInput("");
+    }
+    if (voiceApiKeyInput.trim() && (await saveKey("voice_api_key", voiceApiKeyInput))) {
+      setHasVoiceKey(true);
+      setVoiceApiKeyInput("");
     }
 
     setSaving(false);
     setStatus(error ? `Error: ${error.message}` : "Saved.");
+    return !error;
   };
 
-  const handleRefreshModels = async () => {
+  const handleRefreshModels = async (kind: ModelKind) => {
     if (!supabase || !settings) return;
-    setRefreshing(true);
+    setRefreshing(kind);
     setStatus(null);
 
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
+    const cacheKey = kind === "chat" ? MODEL_CACHE_KEY : kind === "tts" ? TTS_MODEL_CACHE_KEY : STT_MODEL_CACHE_KEY;
+    const setList = kind === "chat" ? setModels : kind === "tts" ? setTtsModels : setSttModels;
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/models`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/models?kind=${kind}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const json = await res.json();
       if (!res.ok) {
         setStatus(`Error: ${json.error ?? "Could not refresh models."}`);
       } else {
-        setModels(json.models);
-        localStorage.setItem(MODEL_CACHE_KEY, JSON.stringify(json.models));
+        setList(json.models);
+        localStorage.setItem(cacheKey, JSON.stringify(json.models));
         setStatus(`Loaded ${json.models.length} models.`);
       }
     } catch {
       setStatus("Error: could not reach the models function.");
     }
 
-    setRefreshing(false);
+    setRefreshing(null);
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    setUploadingAvatar(true);
+    setStatus(null);
+    try {
+      const path = await uploadAsset("avatar", file, { resize: false });
+      setSettings((s) => (s ? { ...s, avatar_path: path } : s));
+      setStatus("Avatar uploaded — click Save to use it, then switch Hero style to Avatar.");
+    } catch (e) {
+      setStatus(`Upload failed: ${e instanceof Error ? e.message : "unknown error"}`);
+    }
+    setUploadingAvatar(false);
+  };
+
+  // Saves current settings first (the public `speak` function reads from
+  // the database, not from this draft state) then calls it with a fixed
+  // sample line and plays the result -- turns "does this model actually
+  // work" into a two-second check instead of guessing.
+  const handleTestVoice = async () => {
+    if (!supabase || !settings) return;
+    setTestingVoice(true);
+    setStatus("Saving settings before testing…");
+    const saved = await handleSaveSettings();
+    if (!saved) {
+      setTestingVoice(false);
+      return;
+    }
+    setStatus("Requesting a sample…");
+    try {
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      if (!anonKey) throw new Error("Supabase is not configured.");
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/speak`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${anonKey}`,
+          apikey: anonKey,
+        },
+        body: JSON.stringify({ text: "Hi, this is a test of the selected voice." }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setStatus(`Error: ${json.error ?? "Voice test failed."}`);
+      } else {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        if (testAudioRef.current) {
+          testAudioRef.current.src = url;
+          await testAudioRef.current.play();
+        }
+        setStatus("Playing sample…");
+      }
+    } catch {
+      setStatus("Error: could not reach the speak function.");
+    }
+    setTestingVoice(false);
   };
 
   if (loading || !settings) return <p className="text-secondary">Loading…</p>;
@@ -183,11 +291,11 @@ const ChatbotEditor = () => {
           <label className={labelClass}>Model</label>
           <button
             type="button"
-            onClick={handleRefreshModels}
-            disabled={refreshing}
+            onClick={() => handleRefreshModels("chat")}
+            disabled={refreshing !== null}
             className={secondaryButtonClass}
           >
-            {refreshing ? "Refreshing…" : "Refresh models"}
+            {refreshing === "chat" ? "Refreshing…" : "Refresh models"}
           </button>
         </div>
         {models.length > 0 ? (
@@ -270,6 +378,197 @@ const ChatbotEditor = () => {
             }
           />
         </div>
+      </div>
+
+      <hr className="border-black-100 my-8" />
+      <h3 className="mb-4 text-[16px] font-bold">Hero</h3>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>Hero style</label>
+        <div className="flex gap-4">
+          {(["computer", "avatar"] as const).map((variant) => (
+            <label key={variant} className="text-secondary flex items-center gap-2 text-[14px]">
+              <input
+                type="radio"
+                name="hero_variant"
+                checked={settings.hero_variant === variant}
+                onChange={() => setSettings({ ...settings, hero_variant: variant })}
+              />
+              {variant === "computer" ? "3D computer (terminal chat)" : "3D avatar (talks, gestures, voice)"}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>Avatar model (.glb)</label>
+        {settings.avatar_path && (
+          <p className="text-secondary mb-2 text-[12px]">
+            Current:{" "}
+            <a
+              href={publicAssetUrl(settings.avatar_path)}
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent underline"
+            >
+              {settings.avatar_path}
+            </a>
+          </p>
+        )}
+        <input
+          type="file"
+          accept=".glb,.gltf,model/gltf-binary"
+          disabled={uploadingAvatar}
+          onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])}
+        />
+        <p className="text-secondary mt-1 text-[12px]">
+          Leave unset to use the bundled stock avatar. A replacement should
+          keep the same bone names and a "mouthOpen" morph target to keep
+          gestures and lip sync working -- see public/avatar/license.txt.
+        </p>
+      </div>
+
+      <hr className="border-black-100 my-8" />
+      <h3 className="mb-4 text-[16px] font-bold">Voice</h3>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>
+          Voice enabled (mic input + spoken replies, avatar hero only)
+        </label>
+        <input
+          type="checkbox"
+          checked={settings.voice_enabled}
+          onChange={(e) => setSettings({ ...settings, voice_enabled: e.target.checked })}
+          className="h-5 w-5"
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>Voice base URL (OpenAI-compatible audio endpoints)</label>
+        <input
+          className={inputClass}
+          placeholder="https://openrouter.ai/api/v1"
+          value={settings.voice_base_url}
+          onChange={(e) => setSettings({ ...settings, voice_base_url: e.target.value })}
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>
+          Voice API key{" "}
+          {hasVoiceKey
+            ? "(currently set — leave blank to keep it)"
+            : "(not set — falls back to the chat API key above)"}
+        </label>
+        <input
+          type="password"
+          className={inputClass}
+          placeholder={hasVoiceKey ? "••••••••••••" : "leave blank to reuse the chat key"}
+          value={voiceApiKeyInput}
+          onChange={(e) => setVoiceApiKeyInput(e.target.value)}
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <div className="mb-2 flex items-center justify-between">
+          <label className={labelClass}>Text-to-speech model</label>
+          <button
+            type="button"
+            onClick={() => handleRefreshModels("tts")}
+            disabled={refreshing !== null}
+            className={secondaryButtonClass}
+          >
+            {refreshing === "tts" ? "Refreshing…" : "Refresh models"}
+          </button>
+        </div>
+        {ttsModels.length > 0 ? (
+          <select
+            className={inputClass}
+            value={settings.tts_model}
+            onChange={(e) => setSettings({ ...settings, tts_model: e.target.value })}
+          >
+            <option value="">Select a model…</option>
+            {ttsModels.map((m) => (
+              <option key={m.model_id} value={m.model_id}>
+                {m.display_name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className={inputClass}
+            placeholder="e.g. deepgram/flux-tts:free"
+            value={settings.tts_model}
+            onChange={(e) => setSettings({ ...settings, tts_model: e.target.value })}
+          />
+        )}
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>Voice name (provider-specific, optional)</label>
+        <input
+          className={inputClass}
+          placeholder="e.g. flux-drew-en"
+          value={settings.tts_voice}
+          onChange={(e) => setSettings({ ...settings, tts_voice: e.target.value })}
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <button
+          type="button"
+          onClick={handleTestVoice}
+          disabled={testingVoice || !settings.tts_model}
+          className={secondaryButtonClass}
+        >
+          {testingVoice ? "Testing…" : "Test voice"}
+        </button>
+        <audio ref={testAudioRef} className="hidden" />
+        <p className="text-secondary mt-1 text-[12px]">
+          Saves your current settings, then asks the model for a short
+          sample and plays it — confirms the model id actually works rather
+          than guessing.
+        </p>
+      </div>
+
+      <div className={fieldClass}>
+        <div className="mb-2 flex items-center justify-between">
+          <label className={labelClass}>Speech-to-text model</label>
+          <button
+            type="button"
+            onClick={() => handleRefreshModels("stt")}
+            disabled={refreshing !== null}
+            className={secondaryButtonClass}
+          >
+            {refreshing === "stt" ? "Refreshing…" : "Refresh models"}
+          </button>
+        </div>
+        {sttModels.length > 0 ? (
+          <select
+            className={inputClass}
+            value={settings.stt_model}
+            onChange={(e) => setSettings({ ...settings, stt_model: e.target.value })}
+          >
+            <option value="">Select a model…</option>
+            {sttModels.map((m) => (
+              <option key={m.model_id} value={m.model_id}>
+                {m.display_name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className={inputClass}
+            placeholder="e.g. openai/whisper-large-v3-turbo"
+            value={settings.stt_model}
+            onChange={(e) => setSettings({ ...settings, stt_model: e.target.value })}
+          />
+        )}
+        <p className="text-secondary mt-1 text-[12px]">
+          Only used as a fallback when the visitor's browser has no
+          built-in speech recognition (mainly Firefox) -- Chrome/Edge/Safari
+          use their own, free and instant.
+        </p>
       </div>
 
       <div className="flex items-center gap-4">

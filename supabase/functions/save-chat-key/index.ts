@@ -1,6 +1,8 @@
-// Authenticated-only. The only way chat_secrets.api_key is ever written —
-// the CMS posts the new key here instead of writing the table directly, so
-// the key never needs a client-facing RLS policy at all.
+// Authenticated-only. The only way chat_secrets.api_key or voice_api_key is
+// ever written — the CMS posts the new key here instead of writing the
+// table directly, so neither key ever needs a client-facing RLS policy.
+// `field` selects which column (default "api_key"), whitelisted against a
+// fixed set rather than accepted as an arbitrary column name.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, handleOptions } from "../_shared/cors.ts";
 import { requireUser } from "../_shared/requireUser.ts";
@@ -24,7 +26,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  let body: { api_key?: string };
+  let body: { api_key?: string; field?: string };
   try {
     body = await req.json();
   } catch {
@@ -42,10 +44,15 @@ Deno.serve(async (req) => {
     });
   }
 
+  const ALLOWED_FIELDS = ["api_key", "voice_api_key"] as const;
+  const field = ALLOWED_FIELDS.includes(body.field as (typeof ALLOWED_FIELDS)[number])
+    ? (body.field as (typeof ALLOWED_FIELDS)[number])
+    : "api_key";
+
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const { error } = await supabase
     .from("chat_secrets")
-    .upsert({ id: 1, api_key: apiKey });
+    .upsert({ id: 1, [field]: apiKey });
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {

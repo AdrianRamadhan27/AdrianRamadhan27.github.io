@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { streamChat, type ChatMessage } from "../../lib/chatClient";
-import { createTypewriter, type Typewriter } from "../../lib/typewriter";
+import { useChatSession } from "../../hooks/useChatSession";
 import type { TChatPublicSettings } from "../../types";
 
 // Shared chat UI: mounted both projected onto the 3D monitor (desktop) and
@@ -14,6 +13,11 @@ import type { TChatPublicSettings } from "../../types";
 // portal) -- React context from the surrounding app, including
 // ContentContext, never reaches it. The caller (ComputersCanvas) reads
 // useContent() itself and threads the value down as a plain prop instead.
+//
+// The message/streaming state machine itself lives in useChatSession, which
+// this and the avatar hero's chat UI both consume -- see that hook for the
+// gesture-tag stripping and voice-barge-in cancel support this component
+// doesn't use but the avatar one does.
 const ScreenChat = ({
   compact = false,
   chatPublic,
@@ -21,73 +25,20 @@ const ScreenChat = ({
   compact?: boolean;
   chatPublic: TChatPublicSettings;
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { messages, busy, error, send } = useChatSession({
+    greeting: chatPublic.greeting,
+  });
   const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const typerRef = useRef<Typewriter | null>(null);
-
-  useEffect(() => {
-    return () => typerRef.current?.cancel();
-  }, []);
-
-  useEffect(() => {
-    if (!chatPublic.greeting) return;
-    typerRef.current?.cancel();
-    setMessages([{ role: "assistant", content: "" }]);
-    const typer = createTypewriter((text) => {
-      setMessages([{ role: "assistant", content: text }]);
-    });
-    typerRef.current = typer;
-    typer.push(chatPublic.greeting);
-    typer.finish();
-  }, [chatPublic.greeting]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || busy) return;
-
-    const nextHistory: ChatMessage[] = [
-      ...messages,
-      { role: "user", content: text },
-    ];
-    setMessages(nextHistory);
+  const handleSend = () => {
+    const text = input;
     setInput("");
-    setBusy(true);
-    setError(null);
-
-    setMessages((m) => [...m, { role: "assistant", content: "" }]);
-
-    typerRef.current?.cancel();
-    const typer = createTypewriter((text) => {
-      setMessages((m) => {
-        const copy = [...m];
-        copy[copy.length - 1] = { role: "assistant", content: text };
-        return copy;
-      });
-    });
-    typerRef.current = typer;
-
-    try {
-      await streamChat(nextHistory, (chunk) => {
-        typer.push(chunk);
-      });
-      // Network stream is done, but the typewriter may still be catching
-      // up (it reveals slower than chunks can arrive) -- keep the input
-      // disabled and the cursor blinking until it actually finishes.
-      await new Promise<void>((resolve) => typer.finish(resolve));
-    } catch (e) {
-      typer.cancel();
-      setError(e instanceof Error ? e.message : "Something went wrong.");
-      setMessages((m) => m.slice(0, -1));
-    } finally {
-      setBusy(false);
-    }
+    void send(text);
   };
 
   if (!chatPublic.enabled) {

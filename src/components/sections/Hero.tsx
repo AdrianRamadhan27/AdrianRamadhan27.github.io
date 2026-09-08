@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 
 import { styles } from "../../constants/styles";
-import { ComputersCanvas } from "../canvas";
+import { ComputersCanvas, AvatarExperience } from "../canvas";
 import { useContent } from "../../hooks/useContent";
 import { scrollToSection } from "../../utils/scrollToSection";
 import CvModal from "../ui/CvModal";
 
 const Hero = () => {
-  const { profile, loading } = useContent();
+  const { profile, loading, chatPublic } = useContent();
   const [cvOpen, setCvOpen] = useState(false);
 
   // min-h-screen alone lets mobile content (text + stacked chat panel) grow
@@ -88,7 +88,7 @@ const Hero = () => {
         </div>
       </div>
 
-      <ComputersCanvas />
+      {chatPublic.heroVariant === "avatar" ? <AvatarExperience /> : <ComputersCanvas />}
 
       <div className="xs:bottom-10 absolute bottom-32 hidden w-full items-center justify-center sm:flex">
         <a

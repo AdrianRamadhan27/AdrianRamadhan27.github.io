@@ -3,6 +3,7 @@
 // sees the base URL, API key, or system prompt directly.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, handleOptions } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -77,14 +78,6 @@ function buildContextBlock(
   return lines.join("\n").trim();
 }
 
-async function hashIp(ip: string): Promise<string> {
-  const data = new TextEncoder().encode(ip);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
@@ -99,34 +92,18 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   // --- rate limit (best-effort, per hashed IP) ---
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  const ipHash = await hashIp(ip);
-  const now = Date.now();
-
-  const { data: rl } = await supabase
-    .from("rate_limits")
-    .select("*")
-    .eq("ip_hash", ipHash)
-    .maybeSingle();
-
-  if (rl && now - new Date(rl.window_start).getTime() < RATE_LIMIT_WINDOW_MS) {
-    if (rl.count >= RATE_LIMIT_MAX_REQUESTS) {
-      return new Response(
-        JSON.stringify({ error: "Too many requests, slow down." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    await supabase
-      .from("rate_limits")
-      .update({ count: rl.count + 1 })
-      .eq("ip_hash", ipHash);
-  } else {
-    await supabase.from("rate_limits").upsert({
-      ip_hash: ipHash,
-      window_start: new Date(now).toISOString(),
-      count: 1,
-    });
+  const allowed = await checkRateLimit(
+    supabase,
+    req,
+    "chat",
+    RATE_LIMIT_WINDOW_MS,
+    RATE_LIMIT_MAX_REQUESTS
+  );
+  if (!allowed) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests, slow down." }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   // --- settings + secret + everything the model should know about Adrian ---
@@ -195,9 +172,18 @@ Deno.serve(async (req) => {
     projects ?? [],
     skills ?? []
   );
-  const systemContent = contextBlock
+  let systemContent = contextBlock
     ? `${settings.system_prompt}\n\n---\nReference information about the portfolio owner. Use this to answer questions; do not invent facts that aren't listed here:\n${contextBlock}`
     : settings.system_prompt;
+
+  // Avatar hero mode only: the 3D avatar can perform a few body gestures,
+  // triggered by the model emitting an inline tag. The frontend strips
+  // these out of the visible reply before it's ever shown/typed (see
+  // src/lib/gestureTags.ts) -- GESTURE_NAMES there must stay in sync with
+  // the tag names mentioned here.
+  if (settings.hero_variant === "avatar") {
+    systemContent += `\n\n---\nYou are embodied as an animated 3D avatar. When a reply calls for a body gesture, include exactly one inline tag anywhere in your reply: [gesture:wave] to wave hello/goodbye, [gesture:jumping_jacks] if asked to do jumping jacks or exercise, [gesture:dance] if asked to dance or celebrate. Only use these three exact tag names, only when it genuinely fits, and don't mention the tag itself in your words.`;
+  }
 
   const messages = [
     { role: "system", content: systemContent },

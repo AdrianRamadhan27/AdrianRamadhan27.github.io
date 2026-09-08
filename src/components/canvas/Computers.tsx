@@ -6,6 +6,7 @@ import * as THREE from "three";
 import CanvasLoader from "../layout/Loader";
 import ScreenChat from "../chat/ScreenChat";
 import { useContent } from "../../hooks/useContent";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { invalidateOnContextRestore } from "../../utils/webgl";
 import type { TChatPublicSettings } from "../../types";
 
@@ -165,15 +166,7 @@ const ComputersCanvas = () => {
   // outside the Canvas in the normal React tree, so it's the right place
   // to read context before threading it down as a plain prop.
   const { chatPublic } = useContent();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`);
-    setIsMobile(mediaQuery.matches);
-    const handleChange = (event: MediaQueryListEvent) => setIsMobile(event.matches);
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
+  const isMobile = useIsMobile(MOBILE_BREAKPOINT_PX);
 
   if (isMobile) {
     return (

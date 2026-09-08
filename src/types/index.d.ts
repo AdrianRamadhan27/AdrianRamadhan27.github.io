@@ -51,10 +51,15 @@ export type TProfile = {
   cvUrl?: string;
 };
 
+export type THeroVariant = "computer" | "avatar";
+
 export type TChatPublicSettings = {
   enabled: boolean;
   greeting: string;
   model: string;
+  heroVariant: THeroVariant;
+  avatarUrl?: string;
+  voiceEnabled: boolean;
 };
 
 export type TMotion = {
