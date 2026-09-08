@@ -84,8 +84,49 @@ const Computers = ({ chatPublic }: { chatPublic: TChatPublicSettings }) => {
       width: Math.abs(localWidth * scale.x),
       height: Math.abs(localHeight * scale.y),
     });
-    invalidate();
-  }, [computer, invalidate]);
+  }, [computer]);
+
+  // Separate effect, keyed on `screen` itself rather than folded into the
+  // effect above -- this is what fixes the chat sometimes landing pinned
+  // near the canvas's top-left corner on first load until the camera is
+  // dragged. drei's <Html transform> only computes its CSS matrix inside
+  // its own useFrame; under frameloop="demand" that only runs on a frame
+  // we explicitly request. Calling invalidate() in the SAME effect that
+  // calls setScreen() races React's own commit: that invalidate() call
+  // schedules a render via requestAnimationFrame while <Html> (gated on
+  // `{screen && ...}`) hasn't been mounted into the tree yet, so the frame
+  // it produces has nothing to position -- Html's default un-positioned
+  // CSS is left standing until something else (OrbitControls calls
+  // invalidate() on every drag) finally produces a frame with Html
+  // already mounted.
+  //
+  // A single invalidate() here (after React has committed the mount,
+  // since effects always run post-commit) closes the most common version
+  // of that race, but not all of it -- verified via repeated fresh loads,
+  // roughly 1 in 6 still landed wrong. The remaining gap is a second,
+  // narrower race: Html's positioning useFrame reads `size` (the canvas's
+  // CSS pixel dimensions from useThree) and the camera's matrices, both of
+  // which can still be settling for a frame or two right after a mount
+  // this heavy (a freshly-parsed GLTF plus the screen's own effect-driven
+  // layout). One invalidate() only guarantees ONE frame renders, not that
+  // that specific frame lands after everything else has settled. Rather
+  // than chase the exact remaining sequencing, a short burst of frames
+  // converges regardless of exactly which one it is that finally has
+  // correct data -- cheap (a few frames, once, only right after the
+  // screen anchor is found) and robust to timing variance across
+  // machines/browsers rather than tuned to this one's.
+  useEffect(() => {
+    if (!screen) return;
+    let frame = 0;
+    let rafId: number;
+    const tick = () => {
+      invalidate();
+      frame += 1;
+      if (frame < 10) rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [screen, invalidate]);
 
   return (
     <mesh>
