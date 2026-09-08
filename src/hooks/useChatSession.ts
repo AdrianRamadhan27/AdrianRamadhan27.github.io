@@ -27,6 +27,32 @@ export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSess
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Mirrors `messages` synchronously. `send` needs the current history at
+  // the instant it's called to build the request to the model -- reading
+  // React state via a setState-updater side channel (an earlier version
+  // did `setMessages((m) => { external = [...m, ...]; return external; })`)
+  // turned out to be unreliable here: nothing guarantees the updater has
+  // actually run by the time the very next line of code reads the
+  // variable it assigned. That silently sent `messages: []` to the chat
+  // edge function on every single message -- confirmed by intercepting the
+  // real network request in a running instance of this app -- which is
+  // exactly why replies looked like the model improvising a generic
+  // self-introduction from the system prompt alone: it never received the
+  // conversation, or even the current question. `messagesRef` is instead
+  // updated manually, synchronously, at every single site that changes
+  // `messages`, so `messagesRef.current` is always trustworthy.
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const setMessagesAndRef = useCallback(
+    (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+      setMessages((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        messagesRef.current = next;
+        return next;
+      });
+    },
+    []
+  );
+
   const typerRef = useRef<Typewriter | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -51,14 +77,14 @@ export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSess
   useEffect(() => {
     if (!greeting) return;
     typerRef.current?.cancel();
-    setMessages([{ role: "assistant", content: "" }]);
+    setMessagesAndRef([{ role: "assistant", content: "" }]);
     const typer = createTypewriter((text) => {
-      setMessages([{ role: "assistant", content: text }]);
+      setMessagesAndRef([{ role: "assistant", content: text }]);
     });
     typerRef.current = typer;
     typer.push(greeting);
     typer.finish();
-  }, [greeting]);
+  }, [greeting, setMessagesAndRef]);
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
@@ -70,21 +96,21 @@ export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSess
     const trimmed = text.trim();
     if (!trimmed || busy) return;
 
-    const nextHistory: ChatMessage[] = [];
-    setMessages((m) => {
-      nextHistory.push(...m, { role: "user", content: trimmed });
-      return nextHistory;
-    });
+    // messagesRef.current is synchronously current -- see the comment on
+    // its declaration above for why this replaced reading it back out of
+    // a setState updater.
+    const nextHistory: ChatMessage[] = [...messagesRef.current, { role: "user", content: trimmed }];
+    setMessagesAndRef(nextHistory);
     setBusy(true);
     setError(null);
-    setMessages((m) => [...m, { role: "assistant", content: "" }]);
+    setMessagesAndRef((m) => [...m, { role: "assistant", content: "" }]);
 
     const abortController = new AbortController();
     abortRef.current = abortController;
 
     typerRef.current?.cancel();
     const typer = createTypewriter((revealed) => {
-      setMessages((m) => {
+      setMessagesAndRef((m) => {
         const copy = [...m];
         copy[copy.length - 1] = { role: "assistant", content: revealed };
         return copy;
@@ -122,15 +148,15 @@ export function useChatSession({ greeting, onGesture, onReplyDone }: UseChatSess
       if (e instanceof DOMException && e.name === "AbortError") {
         // User-initiated cancel (voice barge-in) -- not an error worth
         // showing; just drop the empty assistant bubble.
-        setMessages((m) => m.slice(0, -1));
+        setMessagesAndRef((m) => m.slice(0, -1));
       } else {
         setError(e instanceof Error ? e.message : "Something went wrong.");
-        setMessages((m) => m.slice(0, -1));
+        setMessagesAndRef((m) => m.slice(0, -1));
       }
     } finally {
       setBusy(false);
     }
-  }, [busy]);
+  }, [busy, setMessagesAndRef]);
 
   return { messages, busy, error, send, cancel };
 }

@@ -1,7 +1,7 @@
 name: Supabase keepalive
 
 # Free-tier Supabase projects pause after ~7 days with no API activity. This
-# pings the REST root daily so the project (and this scheduled workflow
+# pings a real table daily so the project (and this scheduled workflow
 # itself — GitHub disables cron workflows after 60 days of repo inactivity)
 # never goes quiet for that long.
 on:
@@ -15,11 +15,17 @@ jobs:
     steps:
       - name: Ping Supabase REST endpoint
         run: |
-          # Supabase's gateway (Kong) requires BOTH headers on /rest/v1/* --
-          # apikey alone 401s. Same requirement documented in
-          # src/lib/chatClient.ts for the edge functions; missed here
-          # originally because a REST root ping looked simpler than it is.
+          # NOT the bare /rest/v1/ root -- verified directly against the
+          # live API that it 401s no matter what headers accompany the
+          # anon key ({"message":"Invalid API key","hint":"Only the
+          # service_role API key can be used for this endpoint."}).
+          # Supabase deliberately locks that one path to service_role
+          # because it serves the full OpenAPI schema for every table,
+          # anon-readable or not. A real anon-readable table (any row,
+          # any column) is what actually counts as "activity" and is what
+          # the anon key can legitimately reach -- both headers are still
+          # required on this one, same as any edge function call.
           curl -sf -o /dev/null -w "%{http_code}\n" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/profile?select=id&limit=1" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
