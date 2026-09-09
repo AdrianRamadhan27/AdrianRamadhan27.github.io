@@ -47,6 +47,10 @@ const ExperienceCard: React.FC<TExperience & { isLast: boolean }> = ({
       // Keeps the company logo painting above the queued arrows climbing
       // the line behind it (see .timeline-icon-front in globals.css).
       iconClassName="timeline-icon-front"
+      // Repositions the date to the top of the opposite-side column
+      // instead of the library's own spot (which .timeline-experience-photo
+      // would otherwise cover) -- see .timeline-date in globals.css.
+      dateClassName="timeline-date"
       // The OUTER element -- the one ancestor .timeline-card-glow (the
       // content box) and the icon circle both sit under -- so
       // :has(.timeline-card-glow:hover) in globals.css can glow the line
@@ -182,6 +186,87 @@ const Experience = () => {
     );
     cards.forEach((card) => observer.observe(card));
     return () => observer.disconnect();
+  }, [experiences]);
+
+  // Keeps a row (.vertical-timeline-element, i.e. .timeline-job-glow) tall
+  // enough for BOTH of its columns -- the description card, and the
+  // date+photo column beside it -- not just the card. The card is the
+  // row's only normal-flow child (the icon and .timeline-experience-photo
+  // are both position:absolute, see globals.css), so the row's natural
+  // height only ever came from the card; when the photo column was taller
+  // than the card, it silently overflowed past the row's own bottom edge
+  // into the NEXT row's space instead of pushing that next row down.
+  //
+  // Plain min-height, not a CSS-only fit-content trick -- the photo
+  // column's real height depends on the photo's fluid width (matches the
+  // card's own responsive width) plus the date's own text-driven height,
+  // a mix of fixed and fluid parts no single CSS aspect-ratio/calc()
+  // expression captures correctly at every viewport width; measuring the
+  // actual rendered boxes and taking whichever is taller is exact instead
+  // of an approximation. Skips rows with no photo entirely (photo-less
+  // rows already size correctly from the card alone, nothing to fix).
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rows = Array.from(
+      container.querySelectorAll<HTMLElement>(".timeline-job-glow")
+    )
+      .map((row) => ({
+        row,
+        content: row.querySelector<HTMLElement>(
+          ".vertical-timeline-element-content"
+        ),
+        photo: row.querySelector<HTMLElement>(".timeline-experience-photo"),
+      }))
+      .filter(
+        (
+          r
+        ): r is { row: HTMLElement; content: HTMLElement; photo: HTMLElement } =>
+          !!r.content && !!r.photo
+      );
+    if (rows.length === 0) return;
+
+    const recalc = () => {
+      // Reset pass BEFORE measuring, separate from the measure pass below
+      // -- rows stack vertically, so shrinking an earlier row mid-loop
+      // would shift every later row's own measured position, contaminating
+      // their numbers. Clearing every row first, then measuring only once
+      // everything is back to its natural (unconstrained) height, avoids
+      // that.
+      rows.forEach(({ row }) => {
+        row.style.minHeight = "";
+      });
+      const needed = rows.map(({ row, content, photo }) => {
+        const rowTop = row.getBoundingClientRect().top;
+        const contentBottom = content.getBoundingClientRect().bottom;
+        const photoBottom = photo.getBoundingClientRect().bottom;
+        return Math.max(contentBottom, photoBottom) - rowTop;
+      });
+      rows.forEach(({ row }, i) => {
+        row.style.minHeight = `${needed[i]}px`;
+      });
+    };
+
+    recalc();
+    // Catches both content reflow (text wrapping differently) and layout
+    // mode changes (mobile's stacked photo vs desktop's absolute one, at
+    // the 1170px breakpoint) -- either changes one of these elements'
+    // rendered size. The window listener is a cheap belt-and-suspenders
+    // fallback for the (unlikely) case a breakpoint flip resizes neither
+    // observed element.
+    const observer = new ResizeObserver(recalc);
+    rows.forEach(({ content, photo }) => {
+      observer.observe(content);
+      observer.observe(photo);
+    });
+    window.addEventListener("resize", recalc);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", recalc);
+      rows.forEach(({ row }) => {
+        row.style.minHeight = "";
+      });
+    };
   }, [experiences]);
 
   return (

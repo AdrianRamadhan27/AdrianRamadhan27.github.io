@@ -91,15 +91,25 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
           </div>
           <div className="mt-5">
             <h3 className="text-[24px] font-bold text-white">{name}</h3>
+            {/* Small green all-caps label, not just a smaller/greyer line
+                of body text -- on mobile these two stack directly on top
+                of each other with the hover flap unavailable to tell them
+                apart visually, so subtitle and description now need to
+                read as two different KINDS of text (a tag vs. a
+                sentence), not just two sizes of the same one. */}
             {subtitle && (
-              <p className="text-secondary mt-2 text-[14px]">{subtitle}</p>
+              <p className="text-accent mt-2 text-[12px] font-semibold uppercase tracking-wide">
+                {subtitle}
+              </p>
             )}
             {/* Description falls back to always-visible here below lg --
                 there's no side margin for the hover flap to pop into on a
                 single-column row, and hover itself isn't really a touch
                 interaction anyway, so this is the only place it's ever
-                seen on mobile/tablet. */}
-            <p className="text-secondary mt-2 text-[13px] lg:hidden">
+                seen on mobile/tablet. mt-3 (not mt-2, matching subtitle)
+                and a looser leading -- extra separation so it doesn't
+                read as a continuation of the subtitle line above it. */}
+            <p className="text-secondary mt-3 text-[14px] leading-relaxed lg:hidden">
               {description}
             </p>
           </div>

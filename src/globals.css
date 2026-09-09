@@ -237,14 +237,34 @@
      like the description card's own copy of it. */
 }
 @media only screen and (min-width: 1170px) {
+  /* NOT just "the card's own gap to the icon" (~32px, measured) -- that
+     gap is measured to the icon's NEAR edge, but the date/photo sit PAST
+     the icon on the far side, so clearing it needs that same 32px gap
+     PLUS the icon's own width (60px) PLUS another 32px so the date/photo
+     sit as far past the icon as the card sits before it (a symmetric
+     look, matching how the library's own original default position
+     (left:124%) already worked out to roughly the same number). All
+     measured directly via Playwright, not derived from the library's own
+     44%/124% figures, which are relative to the row, not this card. */
+  .timeline-experience-photo,
+  .timeline-date {
+    --timeline-opposite-gap: 124px;
+  }
   .timeline-experience-photo {
     position: absolute;
-    top: 50%;
+    /* Below the date (.timeline-date, further down), not vertically
+       centered against the card -- centering used to place a tall photo
+       starting well above the card's own vertical middle, silently
+       covering the date the library renders near the top of this same
+       opposite-side column (left/right:124%, style.min.css). 4rem clears
+       the date's own rendered box (~2.8rem: font-size 16px + its
+       padding:.8em 0) with a bit of headroom, confirmed empirically via
+       Playwright rather than assumed. */
+    top: 4rem;
     left: 100%;
     margin-top: 0;
-    margin-left: 90px;
+    margin-left: var(--timeline-opposite-gap);
     width: 100%;
-    transform: translateY(-50%);
   }
   /* Mirrors the library's own alternating-side rule
      (.vertical-timeline-element:nth-child(even), style.min.css) -- on
@@ -254,7 +274,43 @@
     left: auto;
     right: 100%;
     margin-left: 0;
-    margin-right: 90px;
+    margin-right: var(--timeline-opposite-gap);
+  }
+}
+
+/* dateClassName override (Experience.tsx) -- the library's own two-column
+   date position (style.min.css: left/right:124%, top:6px) lands almost
+   exactly where .timeline-experience-photo sits, which is what let the
+   photo silently cover it. Moved to the TOP of that same opposite-side
+   column instead (matching the photo's own left/right/margin values so
+   they read as one stacked column: date, then photo below it) with the
+   photo's own top:4rem above guaranteeing clearance by construction
+   rather than by coincidence.
+
+   !important: the library's desktop selector for this is deeply nested
+   (its even-row variant chains .vertical-timeline--two-columns, a
+   :nth-child, a :not(), and two more classes -- around (0,6,0) worth of
+   specificity), so matching or beating it with a hand-written selector
+   would be fragile against any future change to those internals, whereas
+   forcing this short, obviously-scoped list of position properties is
+   direct. Only position/alignment properties are forced -- font-size,
+   opacity, padding etc. are all still the library's own. */
+@media only screen and (min-width: 1170px) {
+  .timeline-date {
+    position: absolute !important;
+    top: 0 !important;
+    left: 100% !important;
+    right: auto !important;
+    width: 100% !important;
+    margin-left: var(--timeline-opposite-gap) !important;
+    text-align: left !important;
+  }
+  .vertical-timeline-element:nth-child(even) .timeline-date {
+    left: auto !important;
+    right: 100% !important;
+    margin-left: 0 !important;
+    margin-right: var(--timeline-opposite-gap) !important;
+    text-align: right !important;
   }
 }
 
