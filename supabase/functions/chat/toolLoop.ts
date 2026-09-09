@@ -127,6 +127,18 @@ export type UpstreamCallResult =
 // support). Rather than fail the whole reply over that, retry once without
 // tools -- degrading gracefully to the old "just answer from the directory
 // alone" behavior for that one model, instead of a hard error.
+//
+// stream: true is REQUIRED here -- pumpStream (below) only understands an
+// SSE body ("data: {...}" lines, a trailing "data: [DONE]"). Without this
+// flag an OpenAI-compatible provider returns one plain JSON object instead,
+// which contains no line starting with "data:" at all, so pumpStream finds
+// zero content deltas and zero tool-call deltas on every single request --
+// not a provider/model problem, and not a partial failure either: every
+// reply came back completely empty and silently, since a content-free
+// response is indistinguishable from "the model chose to say nothing" (see
+// continueChatCompletion's own doc comment on that). Confirmed directly:
+// this was missing, live-tested end to end against the deployed function
+// both before and after adding it.
 export async function callUpstream(
   fetchImpl: typeof fetch,
   url: string,
@@ -142,8 +154,8 @@ export async function callUpstream(
 ): Promise<UpstreamCallResult> {
   const attempt = async (withTools: boolean) => {
     const payload = withTools
-      ? body
-      : { ...body, tools: undefined, tool_choice: undefined };
+      ? { ...body, stream: true }
+      : { ...body, tools: undefined, tool_choice: undefined, stream: true };
     return fetchImpl(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },

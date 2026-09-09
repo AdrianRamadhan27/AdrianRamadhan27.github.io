@@ -24,17 +24,26 @@ const iconByKey: Record<string, React.ComponentType<{ className?: string }>> =
 const SocialLinks = ({
   className = "flex items-center gap-5",
   iconClassName = "h-6 w-6",
+  // Lets a caller (the hero) drop platforms that get a richer embed of
+  // their own elsewhere (GithubCard/LinkedInBadge/MediumCard) instead of
+  // also showing as a plain icon right next to them -- Footer doesn't pass
+  // this, so it keeps showing every social as a plain icon as before.
+  excludeIconKeys = [],
 }: {
   className?: string;
   iconClassName?: string;
+  excludeIconKeys?: string[];
 }) => {
   const { socials } = useContent();
+  const visibleSocials = socials.filter(
+    (s) => !excludeIconKeys.includes(s.iconKey)
+  );
 
-  if (socials.length === 0) return null;
+  if (visibleSocials.length === 0) return null;
 
   return (
     <div className={className}>
-      {socials.map((social) => {
+      {visibleSocials.map((social) => {
         const Icon = iconByKey[social.iconKey] ?? FaGlobe;
         return (
           <a

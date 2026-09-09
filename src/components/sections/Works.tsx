@@ -7,6 +7,7 @@ import { SectionWrapper } from "../../hoc";
 import { fadeIn } from "../../utils/motion";
 import { config } from "../../constants/config";
 import { Header } from "../atoms/Header";
+import GithubContributionChart from "../atoms/GithubContributionChart";
 import { TProject } from "../../types";
 import { useContent } from "../../hooks/useContent";
 
@@ -140,14 +141,12 @@ const Works = () => {
     <>
       <Header useMotion={true} {...config.sections.works} />
 
-      <div className="flex w-full">
-        <motion.p
-          variants={fadeIn("", "", 0.1, 1)}
-          className="text-secondary mt-3 max-w-3xl text-[17px] leading-[30px]"
-        >
-          {config.sections.works.content}
-        </motion.p>
-      </div>
+      {/* The intro paragraph (config.sections.works.content) that used to
+          sit here was replaced outright with the GitHub contribution
+          chart, not kept alongside it -- config.sections.works.content
+          itself is left defined (harmless, unused) rather than deleted,
+          in case a future change wants plain intro copy back. */}
+      <GithubContributionChart />
 
       <div className="mt-20 flex flex-wrap justify-center gap-7">
         {projects.map((project, index) => (

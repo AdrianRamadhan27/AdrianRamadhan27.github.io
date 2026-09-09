@@ -80,14 +80,16 @@ const TOOLS: ToolDefinition[] = [
   },
 ];
 
-// The compact half of the system message -- profile/skills stay inlined
-// (already small), experiences/projects are listed as a directory only
-// (index + the one identifying line), full detail comes from a tool call.
+// The compact half of the system message -- profile/skills/socials stay
+// inlined (already small), experiences/projects are listed as a directory
+// only (index + the one identifying line), full detail comes from a tool
+// call.
 function buildDirectoryBlock(
   profile: Record<string, unknown> | null,
   experiences: Record<string, unknown>[],
   projects: Record<string, unknown>[],
-  skills: Record<string, unknown>[]
+  skills: Record<string, unknown>[],
+  socials: Record<string, unknown>[]
 ): string {
   const lines: string[] = [];
 
@@ -130,6 +132,17 @@ function buildDirectoryBlock(
     );
     projects.forEach((p, i) => {
       lines.push(`[${i}] ${p.name}`);
+    });
+  }
+
+  if (socials.length > 0) {
+    // Inlined directly (label + URL), not tool-called like
+    // experiences/projects -- there are only ever a handful of these and
+    // each one is already just one short line, so a round-trip indirection
+    // would cost more than it saves.
+    lines.push("", "Social / profile links:");
+    socials.forEach((s) => {
+      lines.push(`- ${s.label}: ${s.url}`);
     });
   }
 
@@ -225,6 +238,7 @@ Deno.serve(async (req) => {
     { data: experiences },
     { data: projects },
     { data: skills },
+    { data: socials },
   ] = await Promise.all([
     supabase.from("chat_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("chat_secrets").select("api_key").eq("id", 1).maybeSingle(),
@@ -232,6 +246,7 @@ Deno.serve(async (req) => {
     supabase.from("experiences").select("*").order("sort_order"),
     supabase.from("projects").select("*").order("sort_order"),
     supabase.from("skills").select("*").order("sort_order"),
+    supabase.from("socials").select("*").order("sort_order"),
   ]);
 
   if (!settings || !settings.enabled) {
@@ -276,7 +291,13 @@ Deno.serve(async (req) => {
   // by some of them. settings.system_prompt (edited in the CMS) stays pure
   // behavioral instruction; the directory block underneath is assembled
   // fresh from the content tables on every request.
-  const directoryBlock = buildDirectoryBlock(profile, experiencesArr, projectsArr, skills ?? []);
+  const directoryBlock = buildDirectoryBlock(
+    profile,
+    experiencesArr,
+    projectsArr,
+    skills ?? [],
+    socials ?? []
+  );
   let systemContent = directoryBlock
     ? `${settings.system_prompt}\n\n---\nReference information about the portfolio owner. Use this to answer questions; do not invent facts that aren't listed here. Full experience/project details aren't inlined below -- call the get_experience/get_project tools for those:\n${directoryBlock}`
     : settings.system_prompt;

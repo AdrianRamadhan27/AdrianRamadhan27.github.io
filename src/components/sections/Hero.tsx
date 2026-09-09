@@ -4,7 +4,7 @@ import { styles } from "../../constants/styles";
 import { ComputersCanvas, AvatarExperience } from "../canvas";
 import { useContent } from "../../hooks/useContent";
 import CvModal from "../ui/CvModal";
-import SocialLinks from "../atoms/SocialLinks";
+import HeroSocialEmbeds from "../atoms/HeroSocialEmbeds";
 import HeroStats from "../atoms/HeroStats";
 
 const Hero = () => {
@@ -56,7 +56,16 @@ const Hero = () => {
           <div className="accent-gradient h-40 w-1 sm:h-80" />
         </div>
 
-        <div>
+        {/* min-w-0: this is a flex item in the row above, and its default
+            min-width:auto refuses to shrink below its own content's
+            natural width -- HeroSocialEmbeds' GitHub card carries a
+            genuinely wide contribution-chart image (min-w-[500px], scoped
+            to scroll within its own overflow-x-auto wrapper), and without
+            this override that wide min-content bubbles up and pushes this
+            whole column past the mobile viewport's edge instead of being
+            contained by that inner scroll area. Same root cause as the
+            chat input's own min-w-0 fix elsewhere in this codebase. */}
+        <div className="min-w-0">
           {/* Gated on loading, not just "does profile have data yet" --
               profile starts out holding the bundled fallback constants
               (so other, non-Supabase-dependent parts of the page never
@@ -108,9 +117,7 @@ const Hero = () => {
             </button>
           )}
 
-          {!loading && (
-            <SocialLinks className="mt-5 flex items-center gap-5" iconClassName="h-5 w-5" />
-          )}
+          {!loading && <HeroSocialEmbeds className="mt-5" />}
 
           {!loading && <HeroStats />}
         </div>

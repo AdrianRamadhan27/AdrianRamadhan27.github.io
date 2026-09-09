@@ -1,17 +1,26 @@
 import { useContent } from "../../hooks/useContent";
+import { useCountUp } from "../../hooks/useCountUp";
 
 // One "N+ <label>" tile, e.g. "3+ Years Experience". Split out mainly so
 // the divider between tiles (below) doesn't have to duplicate this markup.
-const StatTile = ({ value, label }: { value: number; label: string }) => (
-  <div>
-    <p className="text-accent text-[30px] font-black leading-none sm:text-[38px]">
-      {value}+
-    </p>
-    <p className="text-secondary mt-1 text-[11px] uppercase tracking-wider sm:text-[12px]">
-      {label}
-    </p>
-  </div>
-);
+// Counts up from 0 to `value` on mount (useCountUp) -- HeroStats only ever
+// mounts this once the real number is already known (see its own guard
+// below), so "on mount" already means "the moment this tile first appears
+// on screen", no scroll-into-view trigger needed for a hero element that's
+// on screen from first paint anyway.
+const StatTile = ({ value, label }: { value: number; label: string }) => {
+  const displayValue = useCountUp(value);
+  return (
+    <div>
+      <p className="text-accent text-[30px] font-black leading-none sm:text-[38px]">
+        {displayValue}+
+      </p>
+      <p className="text-secondary mt-1 text-[11px] uppercase tracking-wider sm:text-[12px]">
+        {label}
+      </p>
+    </div>
+  );
+};
 
 // The hero's "big number" summary card -- years of experience / projects
 // done. Both numbers are plain editable fields in the CMS (Profile tab),
