@@ -5,6 +5,7 @@ import { ComputersCanvas, AvatarExperience } from "../canvas";
 import { useContent } from "../../hooks/useContent";
 import CvModal from "../ui/CvModal";
 import SocialLinks from "../atoms/SocialLinks";
+import HeroStats from "../atoms/HeroStats";
 
 const Hero = () => {
   const { profile, loading, chatPublic } = useContent();
@@ -110,6 +111,8 @@ const Hero = () => {
           {!loading && (
             <SocialLinks className="mt-5 flex items-center gap-5" iconClassName="h-5 w-5" />
           )}
+
+          {!loading && <HeroStats />}
         </div>
       </div>
 

@@ -217,6 +217,7 @@ const socials: TSocial[] = [
 const projects: TProject[] = [
   {
     name: "Car Rent",
+    subtitle: "Car rental search & booking platform",
     description:
       "Web-based platform that allows users to search, book, and manage car rentals from various providers, providing a convenient and efficient solution for transportation needs.",
     tags: [
@@ -238,6 +239,7 @@ const projects: TProject[] = [
   },
   {
     name: "Job IT",
+    subtitle: "Job search & salary estimation app",
     description:
       "Web application that enables users to search for job openings, view estimated salary ranges for positions, and locate available jobs based on their current location.",
     tags: [
@@ -259,6 +261,7 @@ const projects: TProject[] = [
   },
   {
     name: "Trip Guide",
+    subtitle: "Flights, hotels & curated trip planning",
     description:
       "A comprehensive travel booking platform that allows users to book flights, hotels, and rental cars, and offers curated recommendations for popular destinations.",
     tags: [

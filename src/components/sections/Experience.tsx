@@ -113,6 +113,37 @@ const ExperienceCard: React.FC<TExperience & { isLast: boolean }> = ({
           </svg>
         </div>
       </div>
+
+      {/* Optional opposite-side photo -- reuses .timeline-card-glow
+          wholesale (border/background + the orbiting arrow above) so it
+          gets the exact same hover/is-centered treatment as the
+          description card itself, not a lookalike copy of it. Positioning
+          (which side, and normal-flow-below vs absolute-beside) lives
+          entirely in globals.css's .timeline-experience-photo -- see its
+          comment for why it can be a plain child here despite ending up
+          visually outside this card's own box. */}
+      {experience.photo && (
+        <div className="timeline-experience-photo timeline-card-glow">
+          <img
+            src={experience.photo}
+            alt={`${experience.companyName} team`}
+            className="h-full w-full rounded-[0.25em] object-cover"
+          />
+          <div className="timeline-card-orbit" aria-hidden>
+            <div className="timeline-card-orbit-icon">
+              <svg viewBox="0 0 24 24" fill="none" className="h-full w-full">
+                <path
+                  d="M4 12h15M13 6l6 6-6 6"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+      )}
     </VerticalTimelineElement>
   );
 };

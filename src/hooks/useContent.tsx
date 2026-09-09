@@ -136,6 +136,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
             iconBg: row.icon_bg ?? "#0d1f19",
             date: row.date_label,
             points: row.points ?? [],
+            photo: publicAssetUrl(row.photo_path),
           }),
           defaultExperiences
         ),
@@ -144,6 +145,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
           (row) => ({
             id: row.id,
             name: row.name,
+            subtitle: row.subtitle ?? "",
             description: row.description,
             tags: row.tags ?? [],
             image: publicAssetUrl(row.image_path) ?? logoFallbackIcon,
@@ -192,6 +194,8 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
           email: row.email ?? defaultProfile.email,
           photoUrl: publicAssetUrl(row.photo_path),
           cvUrl: publicAssetUrl(row.cv_path),
+          yearsExperience: row.years_experience ?? undefined,
+          projectsDone: row.projects_done ?? undefined,
         });
       }
 

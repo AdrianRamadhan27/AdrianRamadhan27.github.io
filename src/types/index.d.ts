@@ -10,11 +10,20 @@ export type TExperience = {
   iconBg: string;
   date: string;
   points: string[];
+  // Opposite-side portrait/team photo in the timeline -- optional, most
+  // entries (including every bundled fallback one) won't have one, and the
+  // card renders without it when absent rather than showing an empty box.
+  photo?: string;
 } & Required<Omit<TCommonProps, "name">>;
 
 export type TProject = {
   id?: string;
+  // Longer blurb, now shown only on hover (see Works.tsx) rather than
+  // always-visible -- `subtitle` below took over its old always-shown spot.
   description: string;
+  // Short tagline under the project name, e.g. "Agentic AI Job hunting
+  // platform" -- editable in the CMS, always visible (unlike description).
+  subtitle: string;
   tags: {
     name: string;
     color: string;
@@ -49,6 +58,12 @@ export type TProfile = {
   email: string;
   photoUrl?: string;
   cvUrl?: string;
+  // Hero stats card, e.g. "3+ Years Experience" / "12+ Projects Done" --
+  // plain editable numbers (see schema.sql), not inferred from data
+  // elsewhere. Optional/undefined hides the card entirely, rather than
+  // showing a hollow "0+" before these are ever filled in.
+  yearsExperience?: number;
+  projectsDone?: number;
 };
 
 export type THeroVariant = "computer" | "avatar";

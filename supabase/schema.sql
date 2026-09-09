@@ -38,6 +38,15 @@ insert into profile (id) values (1) on conflict (id) do nothing;
 -- Safe to re-run against an already-deployed database that predates this column.
 alter table profile add column if not exists chat_context text not null default '';
 
+-- Hero stats card (years of experience / projects done). Deliberately plain
+-- editable numbers, not derived from count(*) on `experiences`/`projects`
+-- or a date-math expression -- the portfolio's headline "N+ years" and
+-- "N+ projects" figures are usually rounder/more favorable than a literal
+-- row count or exact tenure would produce, and the person editing them is
+-- the ONLY one who actually knows the intended number.
+alter table profile add column if not exists years_experience integer;
+alter table profile add column if not exists projects_done integer;
+
 alter table profile enable row level security;
 -- drop-then-create rather than a bare create: Postgres has no
 -- `create policy if not exists` (nor `create or replace policy`), so a
@@ -61,6 +70,9 @@ create table if not exists experiences (
   points text[] not null default '{}',
   sort_order integer not null default 0
 );
+-- Opposite-side portrait/team photo for the timeline card -- optional (a
+-- lot of entries won't have one), rendered only when set.
+alter table experiences add column if not exists photo_path text;
 
 alter table experiences enable row level security;
 drop policy if exists "experiences_public_read" on experiences;
@@ -80,6 +92,11 @@ create table if not exists projects (
   live_link text,
   sort_order integer not null default 0
 );
+-- Short always-visible tagline under the project name (e.g. "Agentic AI
+-- Job hunting platform") -- `description` (above) is the longer blurb,
+-- now shown only on hover instead of always, so this fills the space it
+-- vacated.
+alter table projects add column if not exists subtitle text not null default '';
 
 alter table projects enable row level security;
 drop policy if exists "projects_public_read" on projects;

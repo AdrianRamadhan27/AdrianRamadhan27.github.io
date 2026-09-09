@@ -20,6 +20,7 @@ type Row = {
   date_label: string;
   points: string[];
   sort_order: number;
+  photo_path: string | null;
 };
 
 const blankRow = (sortOrder: number): Omit<Row, "id"> => ({
@@ -30,6 +31,7 @@ const blankRow = (sortOrder: number): Omit<Row, "id"> => ({
   date_label: "",
   points: [],
   sort_order: sortOrder,
+  photo_path: null,
 });
 
 const ExperienceEditor = () => {
@@ -122,6 +124,19 @@ const ExperienceEditor = () => {
       const path = await uploadAsset("companies", file);
       updateRow(id, { icon_path: path });
       setStatus("Icon uploaded — click Save to keep it.");
+    } catch (e) {
+      setStatus(
+        `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
+      );
+    }
+  };
+
+  const handlePhotoUpload = async (id: string, file: File) => {
+    setStatus("Uploading photo…");
+    try {
+      const path = await uploadAsset("experience-photos", file);
+      updateRow(id, { photo_path: path });
+      setStatus("Photo uploaded — click Save to keep it.");
     } catch (e) {
       setStatus(
         `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
@@ -235,6 +250,26 @@ const ExperienceEditor = () => {
               accept="image/*"
               onChange={(e) =>
                 e.target.files?.[0] && handleIconUpload(row.id, e.target.files[0])
+              }
+            />
+          </div>
+
+          <div className={fieldClass}>
+            <label className={labelClass}>
+              Photo (opposite side of the card in the timeline, optional)
+            </label>
+            {row.photo_path && (
+              <img
+                src={publicAssetUrl(row.photo_path)}
+                alt=""
+                className="mb-2 h-32 w-32 rounded-lg object-cover"
+              />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                e.target.files?.[0] && handlePhotoUpload(row.id, e.target.files[0])
               }
             />
           </div>

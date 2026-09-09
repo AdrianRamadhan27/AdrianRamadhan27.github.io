@@ -13,6 +13,7 @@ import { useContent } from "../../hooks/useContent";
 const ProjectCard: React.FC<{ index: number } & TProject> = ({
   index,
   name,
+  subtitle,
   description,
   tags,
   image,
@@ -25,8 +26,26 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
   // which reads as cards randomly "not showing up" if you don't wait the
   // several seconds out. Capped so the stagger stays snappy regardless of
   // how many projects exist.
+  //
+  // Even/odd picks which side the hover flap pops out to (see
+  // .project-desc-flap in globals.css). The row is a centered flex-wrap of
+  // fixed-width cards, most commonly 2 per row at this card width within
+  // the section's own max-w-7xl -- even index (left column) has its real
+  // empty margin to the LEFT, odd (right column) to the RIGHT. This is a
+  // fixed alternation, not a measurement of the actual row each card lands
+  // in, so it stops being exactly correct if the viewport is wide enough
+  // to fit 3+ per row (the middle card's flap would overlap its neighbor)
+  // -- an accepted tradeoff since there's no cheap way to know true row
+  // membership from a plain CSS flex-wrap without a ResizeObserver per
+  // card, and the flap still reads fine overlapping briefly on hover.
+  const flapSide = index % 2 === 0 ? "left" : "right";
+
   return (
-    <motion.div variants={fadeIn("up", "spring", Math.min(index * 0.15, 1), 0.75)}>
+    <motion.div
+      variants={fadeIn("up", "spring", Math.min(index * 0.15, 1), 0.75)}
+      className="project-card-wrap relative"
+      style={{ perspective: "1400px" }}
+    >
       <Tilt
         glareEnable
         tiltEnable
@@ -72,7 +91,17 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
           </div>
           <div className="mt-5">
             <h3 className="text-[24px] font-bold text-white">{name}</h3>
-            <p className="text-secondary mt-2 text-[14px]">{description}</p>
+            {subtitle && (
+              <p className="text-secondary mt-2 text-[14px]">{subtitle}</p>
+            )}
+            {/* Description falls back to always-visible here below lg --
+                there's no side margin for the hover flap to pop into on a
+                single-column row, and hover itself isn't really a touch
+                interaction anyway, so this is the only place it's ever
+                seen on mobile/tablet. */}
+            <p className="text-secondary mt-2 text-[13px] lg:hidden">
+              {description}
+            </p>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {tags.map((tag) => (
@@ -83,6 +112,13 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
           </div>
         </div>
       </Tilt>
+
+      <div
+        className={`project-desc-flap project-desc-flap--${flapSide}`}
+        aria-hidden
+      >
+        <p>{description}</p>
+      </div>
     </motion.div>
   );
 };

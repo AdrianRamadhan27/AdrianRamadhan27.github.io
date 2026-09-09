@@ -15,6 +15,7 @@ type Tag = { name: string; color: string };
 type Row = {
   id: string;
   name: string;
+  subtitle: string;
   description: string;
   tags: Tag[];
   image_path: string | null;
@@ -40,6 +41,7 @@ const textToTags = (text: string): Tag[] =>
 
 const blankRow = (sortOrder: number): Omit<Row, "id"> => ({
   name: "",
+  subtitle: "",
   description: "",
   tags: [],
   image_path: null,
@@ -179,7 +181,21 @@ const ProjectsEditor = () => {
           </div>
 
           <div className={fieldClass}>
-            <label className={labelClass}>Description</label>
+            <label className={labelClass}>
+              Subtitle (short, always shown under the name)
+            </label>
+            <input
+              className={inputClass}
+              placeholder="e.g. Agentic AI job hunting platform"
+              value={row.subtitle}
+              onChange={(e) => updateRow(row.id, { subtitle: e.target.value })}
+            />
+          </div>
+
+          <div className={fieldClass}>
+            <label className={labelClass}>
+              Description (longer, shown on hover)
+            </label>
             <textarea
               rows={3}
               className={inputClass}

@@ -211,6 +211,53 @@
   z-index: 2;
 }
 
+/* The optional per-job photo, opposite the description card. It's a plain
+   CHILD of that card (Experience.tsx renders it inside the same
+   `children`, since VerticalTimelineElement gives no other slot) even
+   though it needs to end up looking like an independent box on the far
+   side of the row -- position:absolute + width:100% resolves against its
+   nearest positioned ancestor, which IS the card (.timeline-card-glow has
+   its own position:relative), so "100% wide, starting at the card's own
+   right edge" reproduces the opposite-side box without ever having to
+   duplicate the library's own 44%-of-row math.
+   aspect-ratio (not a fixed height) -- gives it a sensible height derived
+   purely from its own width at every breakpoint, since unlike the
+   description card its height has no natural content to size against. */
+.timeline-experience-photo {
+  position: relative;
+  margin-top: 1.25rem;
+  margin-left: 60px;
+  width: auto;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  /* No overflow:hidden -- the img itself (h-full/w-full/object-cover,
+     Experience.tsx) never exceeds this box regardless, and this box needs
+     to stay unclipped for its own .timeline-card-orbit marker (inset:-3px,
+     slightly outside the box) to trace its full outline visibly, exactly
+     like the description card's own copy of it. */
+}
+@media only screen and (min-width: 1170px) {
+  .timeline-experience-photo {
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    margin-top: 0;
+    margin-left: 90px;
+    width: 100%;
+    transform: translateY(-50%);
+  }
+  /* Mirrors the library's own alternating-side rule
+     (.vertical-timeline-element:nth-child(even), style.min.css) -- on
+     rows where the description card floats right instead, the photo
+     needs to land on the LEFT to stay on the opposite side. */
+  .vertical-timeline-element:nth-child(even) .timeline-experience-photo {
+    left: auto;
+    right: 100%;
+    margin-left: 0;
+    margin-right: 90px;
+  }
+}
+
 /* The line segment + logo circle for the job currently hovered/centered,
    glowing to match its card (.timeline-card-glow above). Applied via the
    `className` prop on VerticalTimelineElement (the OUTER
@@ -456,4 +503,79 @@
       -1.8em 1.8em 0 0em rgba(255, 255, 255, 0.5),
       -2.6em 0em 0 0em rgba(255, 255, 255, 0.7), -1.8em -1.8em 0 0em #ffffff;
   }
+}
+
+/* project- styles (Works section) ---------------------------------------- */
+
+/* The description flap that pops out into the row's own side margins on
+   hover -- the empty space either side of a centered, fixed-width
+   flex-wrap row (see .project-card-wrap's comment) that the always-on
+   description used to just leave blank. Lives as a sibling of the card
+   itself, not inside it, so `left:100%`/`right:100%` can position it
+   relative to the CARD's own box without the card needing overflow:visible
+   tricks of its own.
+
+   The "spinning 90 degrees, popping from behind the card" motion: hinged
+   at the edge touching the card (transform-origin) and start rotated
+   edge-on (rotateY(90deg) is a hairline sliver from the viewer's angle,
+   which is why it reads as "hidden behind the card" even though it's only
+   really beside it) then rotate flat as it fades in. Needs `perspective`
+   on an ancestor (.project-card-wrap) for the rotateY to look like actual
+   3D depth instead of a flat horizontal squash.
+
+   lg+ only -- below that, a row is a single column with no side margins to
+   pop into at all (ProjectCard falls back to an always-visible description
+   paragraph instead, see Works.tsx). */
+.project-desc-flap {
+  /* display:none base + display:flex only at lg+ (below), not Tailwind's
+     hidden/lg:flex utilities on the element itself -- @tailwind utilities
+     is injected at the top of this file, so a plain unconditional
+     `display` declared here would win the cascade over those utilities
+     regardless of breakpoint (equal specificity, later source wins) and
+     silently defeat the mobile hide. */
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  max-width: 40vw;
+  padding: 1.1rem 1.25rem;
+  border-radius: 1rem;
+  background: rgba(13, 31, 25, 0.95);
+  border: 1px solid rgba(0, 223, 154, 0.35);
+  color: #d6f5e8;
+  font-size: 13px;
+  line-height: 1.65;
+  align-items: center;
+  opacity: 0;
+  z-index: 20;
+  pointer-events: none;
+  transition:
+    opacity 0.3s ease,
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* lg, matching Tailwind's default breakpoint (no custom screens config in
+   tailwind.config.js) -- this is where the fallback always-visible
+   description in Works.tsx switches off, so the two need to agree. */
+@media only screen and (min-width: 1024px) {
+  .project-desc-flap {
+    display: flex;
+  }
+}
+.project-desc-flap--right {
+  left: 100%;
+  margin-left: 18px;
+  transform-origin: left center;
+  transform: rotateY(90deg);
+}
+.project-desc-flap--left {
+  right: 100%;
+  margin-right: 18px;
+  transform-origin: right center;
+  transform: rotateY(90deg);
+}
+.project-card-wrap:hover .project-desc-flap {
+  opacity: 1;
+  transform: rotateY(0deg);
+  pointer-events: auto;
 }

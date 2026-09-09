@@ -19,6 +19,8 @@ type ProfileRow = {
   photo_path: string | null;
   cv_path: string | null;
   chat_context: string;
+  years_experience: number | null;
+  projects_done: number | null;
 };
 
 const EMPTY: ProfileRow = {
@@ -30,6 +32,8 @@ const EMPTY: ProfileRow = {
   photo_path: null,
   cv_path: null,
   chat_context: "",
+  years_experience: null,
+  projects_done: null,
 };
 
 const ProfileEditor = () => {
@@ -189,6 +193,47 @@ const ProfileEditor = () => {
           onChange={(e) => setRow({ ...row, email: e.target.value })}
         />
       </div>
+
+      <div className="mb-5 flex gap-4">
+        <div className="flex-1">
+          <label className={labelClass}>Years of experience</label>
+          <input
+            type="number"
+            min={0}
+            className={inputClass}
+            placeholder="e.g. 3"
+            value={row.years_experience ?? ""}
+            onChange={(e) =>
+              setRow({
+                ...row,
+                years_experience: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+          />
+        </div>
+        <div className="flex-1">
+          <label className={labelClass}>Projects done</label>
+          <input
+            type="number"
+            min={0}
+            className={inputClass}
+            placeholder="e.g. 12"
+            value={row.projects_done ?? ""}
+            onChange={(e) =>
+              setRow({
+                ...row,
+                projects_done: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+          />
+        </div>
+      </div>
+      <p className="text-secondary -mt-3 mb-5 text-[12px]">
+        Shown as a stats card in the hero, below the social links (e.g. "3+
+        Years Experience"). Leave both blank to hide the card -- these are
+        plain numbers you set yourself, not counted automatically from your
+        experience/project entries.
+      </p>
 
       <div className={fieldClass}>
         <label className={labelClass}>Photo</label>
