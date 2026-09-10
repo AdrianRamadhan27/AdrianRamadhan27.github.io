@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Tilt from "react-parallax-tilt";
 import { motion } from "framer-motion";
 import { FiExternalLink } from "react-icons/fi";
@@ -136,6 +137,12 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
 
 const Works = () => {
   const { projects } = useContent();
+  // useContent hands projects over newest-first; "oldest" just reverses.
+  // Nothing on the card shows a date, so without this the order is
+  // invisible to a visitor.
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const orderedProjects =
+    sortOrder === "newest" ? projects : [...projects].reverse();
 
   return (
     <>
@@ -148,8 +155,31 @@ const Works = () => {
           in case a future change wants plain intro copy back. */}
       <GithubContributionChart />
 
-      <div className="mt-20 flex flex-wrap justify-center gap-7">
-        {projects.map((project, index) => (
+      {projects.length > 1 && (
+        <div className="mt-10 flex items-center justify-center gap-2 text-[13px]">
+          <span className="text-secondary">Sort</span>
+          <div className="border-accent/20 bg-tertiary/60 inline-flex rounded-full border p-0.5">
+            {(["newest", "oldest"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setSortOrder(option)}
+                aria-pressed={sortOrder === option}
+                className={`rounded-full px-3 py-1 capitalize transition-colors ${
+                  sortOrder === option
+                    ? "bg-accent text-black"
+                    : "text-secondary hover:text-white"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-12 flex flex-wrap justify-center gap-7">
+        {orderedProjects.map((project, index) => (
           <ProjectCard
             key={project.id ?? `project-${index}`}
             index={index}

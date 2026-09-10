@@ -128,12 +128,18 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
   // finishing its whole animation in silence well before audio's even
   // allowed to play.
   const unlockAudio = () => {
-    if (audioUnlockedRef.current) return;
-    audioUnlockedRef.current = true;
-    void playerRef.current?.ensureReady();
-    // First interaction -> voice defaults ON (unless the visitor already
-    // set it themselves via the toggle). speak()'s own guards still apply.
-    if (!voiceChoiceMadeRef.current && chatPublic.voiceEnabled) {
+    if (!audioUnlockedRef.current) {
+      audioUnlockedRef.current = true;
+      void playerRef.current?.ensureReady();
+    }
+    // First interaction -> voice defaults ON, unless the visitor already
+    // muted it themselves. Deliberately NOT gated on chatPublic.voiceEnabled
+    // here: that setting loads from Supabase a beat after mount, and an
+    // early click (e.g. poking the avatar to make it wave) would otherwise
+    // latch voiceOn to false forever -- speak() re-checks voiceEnabled on
+    // every call anyway, and the mute toggle only renders when it's on, so
+    // a stray voiceOn=true while voice is disabled is harmless.
+    if (!voiceChoiceMadeRef.current && !voiceOnRef.current) {
       setVoice(true);
     }
     if (!greetingSpokenRef.current && chatPublic.greeting.trim()) {
