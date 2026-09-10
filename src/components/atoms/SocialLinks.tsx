@@ -35,9 +35,18 @@ const SocialLinks = ({
   excludeIconKeys?: string[];
 }) => {
   const { socials } = useContent();
-  const visibleSocials = socials.filter(
-    (s) => !excludeIconKeys.includes(s.iconKey)
-  );
+  // Collapse repeats of the same platform to the first entry: someone can
+  // link two GitHub accounts (a personal one and a work one -- the hero
+  // card rotates between them, Projects shows a chart for each), but this
+  // plain icon row wants just the one canonical link per platform. The
+  // first in CMS sort order is the "main" account.
+  const seenKeys = new Set<string>();
+  const visibleSocials = socials.filter((s) => {
+    if (excludeIconKeys.includes(s.iconKey)) return false;
+    if (seenKeys.has(s.iconKey)) return false;
+    seenKeys.add(s.iconKey);
+    return true;
+  });
 
   if (visibleSocials.length === 0) return null;
 

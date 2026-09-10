@@ -47,6 +47,22 @@ alter table profile add column if not exists chat_context text not null default 
 alter table profile add column if not exists years_experience integer;
 alter table profile add column if not exists projects_done integer;
 
+-- The hero portrait is a transparent-background cutout PNG of the person
+-- rather than a rectangular photo: when true the hero renders it with no
+-- card frame, the bottom edge faded out with a mask, and a green glow
+-- tracing the silhouette (see FlipAvatar / .hero-cutout-* in globals.css).
+alter table profile add column if not exists photo_cutout boolean not null default false;
+
+-- LinkedIn embed card overrides (HeroSocialEmbeds' LinkedInCard). LinkedIn
+-- has no public API and blocks scraping (HTTP 999), so the card can't pull
+-- the real name/photo/headline live -- these let the CMS set them to match
+-- the actual LinkedIn profile. All optional; each falls back to the
+-- general profile field (full_name / photo_path) or the latest job title
+-- when left blank.
+alter table profile add column if not exists linkedin_name text;
+alter table profile add column if not exists linkedin_headline text;
+alter table profile add column if not exists linkedin_photo_path text;
+
 alter table profile enable row level security;
 -- drop-then-create rather than a bare create: Postgres has no
 -- `create policy if not exists` (nor `create or replace policy`), so a

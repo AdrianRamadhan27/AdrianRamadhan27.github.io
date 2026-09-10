@@ -57,7 +57,17 @@ export type TProfile = {
   aboutText: string;
   email: string;
   photoUrl?: string;
+  // True when photoUrl is a transparent cutout PNG -- the hero then drops
+  // the card frame, fades the portrait's bottom edge, and glows the
+  // silhouette green (see FlipAvatar).
+  photoCutout?: boolean;
   cvUrl?: string;
+  // LinkedIn embed card overrides (see LinkedInCard) -- LinkedIn can't be
+  // scraped, so these are set in the CMS to match the real profile. Each
+  // falls back to the general field / latest job title when unset.
+  linkedinName?: string;
+  linkedinHeadline?: string;
+  linkedinPhotoUrl?: string;
   // Hero stats card, e.g. "3+ Years Experience" / "12+ Projects Done" --
   // plain editable numbers (see schema.sql), not inferred from data
   // elsewhere. Optional/undefined hides the card entirely, rather than

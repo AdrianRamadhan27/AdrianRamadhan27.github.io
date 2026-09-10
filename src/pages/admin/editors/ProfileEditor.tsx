@@ -17,10 +17,14 @@ type ProfileRow = {
   about_text: string;
   email: string;
   photo_path: string | null;
+  photo_cutout: boolean;
   cv_path: string | null;
   chat_context: string;
   years_experience: number | null;
   projects_done: number | null;
+  linkedin_name: string | null;
+  linkedin_headline: string | null;
+  linkedin_photo_path: string | null;
 };
 
 const EMPTY: ProfileRow = {
@@ -30,10 +34,14 @@ const EMPTY: ProfileRow = {
   about_text: "",
   email: "",
   photo_path: null,
+  photo_cutout: false,
   cv_path: null,
   chat_context: "",
   years_experience: null,
   projects_done: null,
+  linkedin_name: null,
+  linkedin_headline: null,
+  linkedin_photo_path: null,
 };
 
 const ProfileEditor = () => {
@@ -101,6 +109,19 @@ const ProfileEditor = () => {
       const path = await uploadAsset("photo", file);
       setRow((r) => ({ ...r, photo_path: path }));
       setStatus("Photo uploaded — click Save to keep it.");
+    } catch (e) {
+      setStatus(
+        `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
+      );
+    }
+  };
+
+  const handleLinkedInPhotoUpload = async (file: File) => {
+    setStatus("Uploading LinkedIn photo…");
+    try {
+      const path = await uploadAsset("photo", file);
+      setRow((r) => ({ ...r, linkedin_photo_path: path }));
+      setStatus("LinkedIn photo uploaded — click Save to keep it.");
     } catch (e) {
       setStatus(
         `Upload failed: ${e instanceof Error ? e.message : "unknown error"}`
@@ -249,6 +270,19 @@ const ProfileEditor = () => {
           accept="image/*"
           onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0])}
         />
+        <label className="text-secondary mt-3 flex items-center gap-2 text-[13px]">
+          <input
+            type="checkbox"
+            checked={row.photo_cutout}
+            onChange={(e) => setRow({ ...row, photo_cutout: e.target.checked })}
+          />
+          This photo is a cutout (transparent PNG of you, no background)
+        </label>
+        <p className="text-secondary mt-1 text-[12px]">
+          When checked, the hero shows it with no card frame -- the bottom
+          fades out and a green glow traces your outline. Upload an actual
+          background-removed PNG for this to look right.
+        </p>
       </div>
 
       <div className={fieldClass}>
@@ -268,6 +302,60 @@ const ProfileEditor = () => {
           accept="application/pdf"
           onChange={(e) => e.target.files?.[0] && handleCvUpload(e.target.files[0])}
         />
+      </div>
+
+      <div className="border-white/10 mb-5 mt-2 border-t pt-5">
+        <h3 className="mb-1 text-[15px] font-semibold">LinkedIn card</h3>
+        <p className="text-secondary mb-4 text-[12px]">
+          The hero's LinkedIn embed. LinkedIn has no public API and blocks
+          scraping, so its name / photo / headline can't be pulled
+          automatically -- set them here to match your real profile. Leave
+          any field blank to fall back to your main name / photo / latest
+          job title.
+        </p>
+
+        <div className={fieldClass}>
+          <label className={labelClass}>Name on LinkedIn card</label>
+          <input
+            className={inputClass}
+            placeholder={row.full_name || "Falls back to your full name"}
+            value={row.linkedin_name ?? ""}
+            onChange={(e) =>
+              setRow({ ...row, linkedin_name: e.target.value || null })
+            }
+          />
+        </div>
+
+        <div className={fieldClass}>
+          <label className={labelClass}>Headline on LinkedIn card</label>
+          <input
+            className={inputClass}
+            placeholder="Falls back to your latest job title"
+            value={row.linkedin_headline ?? ""}
+            onChange={(e) =>
+              setRow({ ...row, linkedin_headline: e.target.value || null })
+            }
+          />
+        </div>
+
+        <div className={fieldClass}>
+          <label className={labelClass}>LinkedIn card photo</label>
+          {row.linkedin_photo_path && (
+            <img
+              src={publicAssetUrl(row.linkedin_photo_path)}
+              alt="Current LinkedIn card"
+              className="mb-3 h-20 w-20 rounded-full object-cover"
+            />
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) =>
+              e.target.files?.[0] &&
+              handleLinkedInPhotoUpload(e.target.files[0])
+            }
+          />
+        </div>
       </div>
 
       <div className="flex items-center gap-4">

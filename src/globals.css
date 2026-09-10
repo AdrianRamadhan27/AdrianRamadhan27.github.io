@@ -670,3 +670,34 @@
 .hero-flip-face--back {
   transform: rotateY(180deg);
 }
+
+/* green-silhouette-glow : figure-shaped green glow shared by the hero
+   cutout photo and the 3D avatar canvas (Avatar.tsx). A drop-shadow on a
+   transparent-backed element traces its actual rendered outline, so the
+   glow follows the person's silhouette instead of approximating it with
+   an oval. It grows + brightens while the pointer is over the figure --
+   put .green-silhouette-glow on the element that should glow and
+   .green-silhouette-glow-host on whatever ancestor registers the hover
+   (the card face / the canvas wrapper). For the cutout the glow sits on
+   the wrapper while the bottom-fade mask sits on the <img> below, so --
+   per the CSS filter/mask order -- the mask clips the image first and
+   this drop-shadow then traces THAT result, following the faded hem
+   rather than glowing along a straight bottom edge. */
+.green-silhouette-glow {
+  filter: drop-shadow(0 0 5px rgba(0, 223, 154, 0.55))
+    drop-shadow(0 0 17px rgba(0, 223, 154, 0.32));
+  transition: filter 0.45s ease-out;
+}
+/* Toggled by React hover state on the wrapping component, NOT a CSS
+   :hover -- the photo cutout face lives inside a preserve-3d flip card
+   and :hover hit-testing through that 3D context is unreliable (the
+   avatar's own hover always used a state flag for the same reason). */
+.green-silhouette-glow--hover {
+  filter: drop-shadow(0 0 11px rgba(0, 223, 154, 0.82))
+    drop-shadow(0 0 30px rgba(0, 223, 154, 0.5));
+}
+.hero-cutout-img {
+  -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 97%);
+  mask-image: linear-gradient(to bottom, #000 58%, transparent 97%);
+  filter: grayscale(0.15) contrast(1.03) saturate(1.1);
+}

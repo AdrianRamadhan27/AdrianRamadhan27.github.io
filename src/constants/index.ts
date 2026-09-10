@@ -193,6 +193,11 @@ const socials: TSocial[] = [
     iconKey: "github",
   },
   {
+    label: "GitHub (Work)",
+    url: "https://github.com/adrianramadhan-strait",
+    iconKey: "github",
+  },
+  {
     label: "LinkedIn",
     url: "https://www.linkedin.com/in/adrian-voiz/",
     iconKey: "linkedin",

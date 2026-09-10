@@ -210,6 +210,7 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
             <FlipAvatar
               avatarUrl={chatPublic.avatarUrl}
               photoUrl={profile.photoUrl}
+              photoCutout={profile.photoCutout}
               className="h-full w-full"
             />
           </div>
@@ -222,6 +223,7 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
         <FlipAvatar
           avatarUrl={chatPublic.avatarUrl}
           photoUrl={profile.photoUrl}
+          photoCutout={profile.photoCutout}
           className="absolute right-[var(--hero-photo-right-gap,15%)] top-[var(--hero-photo-top,24%)] z-0 aspect-[2/3] h-[var(--hero-photo-height,54%)] w-auto"
         />
         <div className="absolute inset-x-0 bottom-8 flex justify-center px-4">
@@ -331,6 +333,7 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
             ref={avatarRef}
             avatarUrl={chatPublic.avatarUrl}
             photoUrl={profile.photoUrl}
+            photoCutout={profile.photoCutout}
             className="h-full w-full"
           />
         </div>
@@ -365,6 +368,7 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
         ref={avatarRef}
         avatarUrl={chatPublic.avatarUrl}
         photoUrl={profile.photoUrl}
+        photoCutout={profile.photoCutout}
         className="animate-pop absolute right-[var(--hero-photo-right-gap,15%)] top-[var(--hero-photo-top,24%)] z-0 aspect-[2/3] h-[var(--hero-photo-height,54%)] w-auto"
       />
 

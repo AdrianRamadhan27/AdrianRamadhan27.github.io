@@ -2,7 +2,7 @@ import { TSocial } from "../types";
 
 // Derives LinkedIn's "vanity name" (the slug after /in/) from the existing
 // LinkedIn social link -- same one-source-of-truth reasoning as
-// getGithubUsername in ./github.ts: no separate CMS field just to store
+// getGithubAccounts in ./github.ts: no separate CMS field just to store
 // the same identifier twice.
 export function getLinkedInVanity(socials: TSocial[]): string | null {
   const social = socials.find((s) => s.iconKey === "linkedin" && s.url);

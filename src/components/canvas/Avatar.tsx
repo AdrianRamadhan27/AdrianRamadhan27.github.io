@@ -609,6 +609,10 @@ const AvatarCanvas = forwardRef<
     );
 
     const url = useMemo(() => avatarUrl || DEFAULT_AVATAR_URL, [avatarUrl]);
+    // A state flag, not a CSS :hover -- this outer div isn't 3D-transformed
+    // so the pointer events fire fine, but the glow it drives can sit
+    // inside a preserve-3d flip card (FlipAvatar back face) where a CSS
+    // :hover on a descendant wouldn't reliably match.
     const [hovered, setHovered] = useState(false);
 
     const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -638,50 +642,33 @@ const AvatarCanvas = forwardRef<
             box). A dedicated inner wrapper we fully control sidesteps
             both failure modes regardless of what the caller passes in. */}
         <div className="relative h-full w-full">
-          {/* CSS, not an in-scene 3D glow (contrast this with TechBalls'
-              <Glow>, a real plane in the WebGL scene): Bounds above auto-
-              computes the camera framing from the scene's actual bounding
-              box, so any extra geometry added for a glow would get
-              measured too and throw that off -- a CSS layer behind the
-              (transparent-background) canvas achieves the same visual
-              highlight without touching anything Bounds measures. */}
+          {/* Green glow via a drop-shadow on the (transparent-background)
+              canvas element itself, not a separate shape behind it: the
+              shadow traces the actual rendered figure's alpha, so it's
+              silhouette-shaped rather than an approximating oval, and it
+              matches the hero cutout photo's own glow exactly (same
+              .green-silhouette-glow class, same hover grow/brighten).
+              Purely a CSS post-process on the composited canvas output --
+              it adds nothing to the WebGL scene, so <Bounds>'s camera fit
+              (computed from scene geometry) is untouched, same reason the
+              old oval was CSS too. Recomputed each frame since the canvas
+              repaints each frame; measured fine at hero size for one
+              element. */}
           <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-1/2 transition-[opacity,transform] duration-500 ease-out"
-            style={{
-              // Fixed width/height (not inset-0 filling the whole box) --
-              // radial-gradient's default "ellipse" shape with a keyword
-              // size like closest-side conforms to whatever box it's
-              // painted into, so filling the container outright made the
-              // glow exactly as wide-vs-tall as the container itself,
-              // which is wider than tall in most AvatarCanvas call sites
-              // -- an oval on its side, not matching a standing figure.
-              // Giving this div its own explicitly PORTRAIT box instead
-              // (taller than wide) decouples the glow's shape from the
-              // container's shape entirely, so it reads as an upright oval
-              // silhouette regardless of how the container itself is
-              // proportioned.
-              width: "55%",
-              height: "92%",
-              background:
-                "radial-gradient(closest-side, rgba(0,223,154,0.65), rgba(0,223,154,0) 72%)",
-              opacity: hovered ? 1 : 0.55,
-              transform: hovered
-                ? "translate(-50%, -50%) scale(1.15)"
-                : "translate(-50%, -50%) scale(0.85)",
-              filter: "blur(6px)",
-            }}
-          />
-          <Canvas
-            frameloop={active ? "always" : "never"}
-            dpr={[1, 2]}
-            camera={{ fov: 30, position: [0, 1.5, 3.2] }}
-            onCreated={invalidateOnContextRestore}
+            className={`green-silhouette-glow h-full w-full ${
+              hovered ? "green-silhouette-glow--hover" : ""
+            }`}
           >
-            <ambientLight intensity={0.75} />
-            <directionalLight position={[2, 4, 3]} intensity={1.1} />
-            <hemisphereLight intensity={0.25} groundColor="black" />
-            <Suspense fallback={<CanvasLoader />}>
+            <Canvas
+              frameloop={active ? "always" : "never"}
+              dpr={[1, 2]}
+              camera={{ fov: 30, position: [0, 1.5, 3.2] }}
+              onCreated={invalidateOnContextRestore}
+            >
+              <ambientLight intensity={0.75} />
+              <directionalLight position={[2, 4, 3]} intensity={1.1} />
+              <hemisphereLight intensity={0.25} groundColor="black" />
+              <Suspense fallback={<CanvasLoader />}>
               {/* Auto-frames the avatar regardless of container aspect ratio --
                   same problem the Hero/Earth/Skills canvases solve by hand
                   (see FitZoom in Earth.tsx, FitOrthoCamera in TechBalls.tsx);
@@ -707,7 +694,8 @@ const AvatarCanvas = forwardRef<
                 />
               </Bounds>
             </Suspense>
-          </Canvas>
+            </Canvas>
+          </div>
         </div>
       </div>
     );

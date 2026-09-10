@@ -1,22 +1,42 @@
 import { TSocial } from "../types";
 
-// Derives the GitHub username from the existing "GitHub" social link
-// (Socials tab in the CMS) rather than adding a whole new CMS field just
-// to store the same username a second time -- one source of truth, and
-// every GitHub embed (GithubCard in the hero, GithubContributionChart in
-// Projects) disappears on its own if that social link is ever removed
-// instead of needing a separate toggle to keep in sync with it.
-export function getGithubUsername(socials: TSocial[]): string | null {
-  const social = socials.find((s) => s.iconKey === "github" && s.url);
-  if (!social) return null;
-  try {
-    const url = new URL(social.url);
-    if (!/(^|\.)github\.com$/i.test(url.hostname)) return null;
-    const username = url.pathname.split("/").filter(Boolean)[0];
-    return username || null;
-  } catch {
-    return null;
+export type GithubAccount = {
+  username: string;
+  /** The Socials-list label for this account, e.g. "GitHub" or
+   *  "GitHub (Work)" -- used to caption the per-account contribution chart. */
+  label: string;
+  url: string;
+};
+
+// Every GitHub account linked in the Socials list (CMS Socials tab), in
+// the CMS sort order, deduped by username. A portfolio legitimately has
+// more than one -- a personal account and a work/org one -- so this
+// returns all of them rather than just the first: the hero GithubCard
+// rotates through them and the Projects section shows one contribution
+// calendar per account. The FIRST entry is the "main" account (the only
+// one the footer icon row shows). Same one-source-of-truth reasoning as
+// before -- the username comes from the social link's own URL, no
+// separate CMS field.
+export function getGithubAccounts(socials: TSocial[]): GithubAccount[] {
+  const accounts: GithubAccount[] = [];
+  for (const social of socials) {
+    if (social.iconKey !== "github" || !social.url) continue;
+    try {
+      const url = new URL(social.url);
+      if (!/(^|\.)github\.com$/i.test(url.hostname)) continue;
+      const username = url.pathname.split("/").filter(Boolean)[0];
+      if (!username) continue;
+      if (
+        accounts.some((a) => a.username.toLowerCase() === username.toLowerCase())
+      ) {
+        continue;
+      }
+      accounts.push({ username, label: social.label, url: social.url });
+    } catch {
+      // Malformed URL -- skip this entry, keep scanning the rest.
+    }
   }
+  return accounts;
 }
 
 // ghchart.rshah.org renders the same daily-contribution calendar heatmap

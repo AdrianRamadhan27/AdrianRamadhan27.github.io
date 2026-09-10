@@ -21,6 +21,10 @@ const WAVE_AFTER_FLIP_MS = 1000;
 type Props = {
   avatarUrl?: string;
   photoUrl?: string;
+  // photoUrl is a transparent cutout PNG -- render it bare (no card frame),
+  // with its bottom edge masked to a fade and a green glow on the
+  // silhouette, instead of the framed-photo treatment.
+  photoCutout?: boolean;
   className?: string;
 };
 
@@ -37,9 +41,15 @@ type Props = {
 // AvatarExperience can keep driving the avatar's mouth/speaking/gestures
 // every frame regardless of which side is currently showing.
 const FlipAvatar = forwardRef<AvatarController, Props>(
-  ({ avatarUrl, photoUrl, className }, ref) => {
+  ({ avatarUrl, photoUrl, photoCutout = false, className }, ref) => {
     const innerRef = useRef<AvatarController>(null);
     const [showAvatar, setShowAvatar] = useState(false);
+    // Drives the cutout photo's silhouette-glow grow/brighten. On the
+    // non-3D outer div (not a CSS :hover on the glow itself) because the
+    // glow sits inside the preserve-3d flip card, where :hover
+    // hit-testing through the 3D context is unreliable -- same reason
+    // AvatarCanvas tracks its own hover in state.
+    const [photoHovered, setPhotoHovered] = useState(false);
 
     useImperativeHandle(
       ref,
@@ -95,7 +105,11 @@ const FlipAvatar = forwardRef<AvatarController, Props>(
       // on this outer div, away from the perspective/preserve-3d chain --
       // animate-pop's own `transform: scale(...)` on the same element as
       // `perspective` can flatten the 3D flip in some browsers.
-      <div className={className}>
+      <div
+        className={className}
+        onPointerEnter={() => setPhotoHovered(true)}
+        onPointerLeave={() => setPhotoHovered(false)}
+      >
         <div className="hero-flip h-full w-full">
           <div
             className={`hero-flip-inner ${showAvatar ? "is-flipped" : ""}`}
@@ -104,32 +118,58 @@ const FlipAvatar = forwardRef<AvatarController, Props>(
               type="button"
               aria-label="Show the interactive avatar"
               onClick={() => setShowAvatar(true)}
-              className="hero-flip-face green-pink-gradient shadow-card block cursor-pointer rounded-[24px] p-[3px]"
+              className={
+                photoCutout
+                  ? "hero-flip-face flex cursor-pointer items-end justify-center"
+                  : "hero-flip-face green-pink-gradient shadow-card block cursor-pointer rounded-[24px] p-[3px]"
+              }
             >
-              {/* Same parallax-tilt + green glare the portrait had on the
-                  About page. Wraps only the image, not the flip face
-                  itself -- the face carries the card's own rotateY flip
-                  state, and a second 3D transform on the same element
-                  would fight it. The face is only ever hovered while the
-                  card is flat (photo showing), so the two never overlap. */}
-              <Tilt
-                glareEnable
-                tiltEnable
-                tiltMaxAngleX={8}
-                tiltMaxAngleY={8}
-                glareColor="#00df9a"
-                glareMaxOpacity={0.35}
-                className="h-full w-full overflow-hidden rounded-[22px]"
-              >
-                <img
-                  src={photoUrl}
-                  alt=""
-                  className="h-full w-full rounded-[22px] object-cover object-top"
-                  style={{
-                    filter: "grayscale(0.3) contrast(1.05) saturate(1.15)",
-                  }}
-                />
-              </Tilt>
+              {photoCutout ? (
+                // Bare cutout: no frame. The glow sits on the wrapper, not
+                // the <img>, so drop-shadow reads the image's alpha AFTER
+                // its own bottom-fade mask -- the green outline follows the
+                // faded hem instead of glowing along a hard box edge there.
+                // Same silhouette glow (and hover grow/brighten) as the 3D
+                // avatar on the back face. object-bottom + items-end stand
+                // the figure on the box's floor, roughly where the avatar's
+                // feet land.
+                <div
+                  className={`green-silhouette-glow h-full w-full ${
+                    photoHovered ? "green-silhouette-glow--hover" : ""
+                  }`}
+                >
+                  <img
+                    src={photoUrl}
+                    alt=""
+                    className="hero-cutout-img h-full w-full object-contain object-bottom"
+                  />
+                </div>
+              ) : (
+                // Same parallax-tilt + green glare the portrait had on the
+                // About page. Wraps only the image, not the flip face
+                // itself -- the face carries the card's own rotateY flip
+                // state, and a second 3D transform on the same element
+                // would fight it. The face is only ever hovered while the
+                // card is flat (photo showing), so the two never overlap.
+                <Tilt
+                  glareEnable
+                  tiltEnable
+                  tiltMaxAngleX={8}
+                  tiltMaxAngleY={8}
+                  glareColor="#00df9a"
+                  glareMaxOpacity={0.35}
+                  className="h-full w-full overflow-hidden rounded-[22px]"
+                >
+                  <img
+                    src={photoUrl}
+                    alt=""
+                    className="h-full w-full rounded-[22px] object-cover object-top"
+                    style={{
+                      filter: "grayscale(0.3) contrast(1.05) saturate(1.15)",
+                    }}
+                  />
+                </Tilt>
+              )}
             </button>
 
             <div className="hero-flip-face hero-flip-face--back">

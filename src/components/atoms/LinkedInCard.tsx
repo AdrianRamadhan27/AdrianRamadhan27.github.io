@@ -14,22 +14,26 @@ import { getLinkedInVanity } from "../../utils/linkedin";
 // -- there's no legitimate way to pull live LinkedIn data client- or
 // server-side here.
 //
-// So this reuses data already in the CMS instead, not a live fetch from
-// LinkedIn at all: profile.fullName and profile.photoUrl are already shown
-// elsewhere (Hero/About). The subtitle line is the latest job title --
-// experiences[0], the Experience section's own top/most-recent entry
-// (that list is already ordered newest-first; see Experience.tsx's own
-// comment on the arrow queue pointing at "the current/most recent role's
-// icon" for the same assumption) -- falling back to profile.headline (an
-// existing Profile-tab field, otherwise unused on the public site) only
-// if no experience entries exist at all.
+// So the card's name / photo / headline come from the CMS instead of a
+// live LinkedIn fetch. Dedicated Profile-tab fields (linkedin_name,
+// linkedin_photo_path, linkedin_headline) set them to match the real
+// LinkedIn profile; each falls back when left blank:
+//   name     -> profile.fullName
+//   photo    -> profile.photoUrl
+//   headline -> latest job title (experiences[0], already newest-first --
+//               see Experience.tsx) -> profile.headline
 const LinkedInCard = ({ className = "" }: { className?: string }) => {
   const { profile, socials, experiences } = useContent();
   const vanity = getLinkedInVanity(socials);
   const latestJob = experiences[0];
-  const subtitle = latestJob
-    ? `${latestJob.title} at ${latestJob.companyName}`
-    : profile.headline;
+
+  const displayName = profile.linkedinName?.trim() || profile.fullName;
+  const photoUrl = profile.linkedinPhotoUrl || profile.photoUrl;
+  const subtitle =
+    profile.linkedinHeadline?.trim() ||
+    (latestJob
+      ? `${latestJob.title} at ${latestJob.companyName}`
+      : profile.headline);
 
   // No LinkedIn social link configured (or it's not actually a
   // linkedin.com/in/... URL) -- nothing to link this card to.
@@ -59,10 +63,10 @@ const LinkedInCard = ({ className = "" }: { className?: string }) => {
       className={`pointer-events-auto flex flex-col rounded-2xl border border-[#0a66c2]/40 bg-[#0a2540] p-4 transition-transform hover:scale-[1.02] hover:border-[#0a66c2]/70 ${className}`}
     >
       <div className="flex items-center gap-3">
-        {profile.photoUrl ? (
+        {photoUrl ? (
           <img
-            src={profile.photoUrl}
-            alt={profile.fullName}
+            src={photoUrl}
+            alt={displayName}
             className="h-10 w-10 flex-shrink-0 rounded-full border border-[#0a66c2]/50 object-cover"
           />
         ) : (
@@ -72,7 +76,7 @@ const LinkedInCard = ({ className = "" }: { className?: string }) => {
         )}
         <div className="min-w-0">
           <p className="truncate text-[14px] font-bold text-white">
-            {profile.fullName}
+            {displayName}
           </p>
           {subtitle && (
             <p className="truncate text-[11px] text-[#8fb8e0]">{subtitle}</p>
