@@ -76,6 +76,18 @@ const ContentContext = createContext<TContent>({
 
 export const useContent = () => useContext(ContentContext);
 
+// Ordering contract for experiences + projects: the DB (and the bundled
+// fallback constants) store them CHRONOLOGICALLY -- ascending sort_order =
+// oldest first. That's how the `chat` edge function reads them, so
+// get_experience(-1) / get_project(-1) unambiguously means "the most
+// recent one". The public site wants the opposite (newest first, in the
+// timeline and the projects grid, and experiences[0] = current role for
+// the LinkedIn card), so every frontend consumer gets the list reversed
+// here, once, rather than each component re-deciding.
+function newestFirst<T>(rows: T[]): T[] {
+  return [...rows].reverse();
+}
+
 // Fetches one table and maps it; on any error (missing table, RLS denial,
 // paused/unreachable project) it silently keeps the bundled fallback so the
 // public site never renders empty.
@@ -118,9 +130,14 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [profile, setProfile] = useState<TProfile>(defaultProfile);
-  const [experiences, setExperiences] =
-    useState<TExperience[]>(defaultExperiences);
-  const [projects, setProjects] = useState<TProject[]>(defaultProjects);
+  // newestFirst: the constants are stored oldest-first (see its comment);
+  // the UI shows newest-first.
+  const [experiences, setExperiences] = useState<TExperience[]>(() =>
+    newestFirst(defaultExperiences)
+  );
+  const [projects, setProjects] = useState<TProject[]>(() =>
+    newestFirst(defaultProjects)
+  );
   const [technologies, setTechnologies] =
     useState<TTechnology[]>(defaultTechnologies);
   const [socials, setSocials] = useState<TSocial[]>(defaultSocials);
@@ -216,8 +233,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
-      setExperiences(exp);
-      setProjects(proj);
+      // exp/proj come back oldest-first (DB sort_order ascending); the
+      // site shows newest-first -- see newestFirst's comment.
+      setExperiences(newestFirst(exp));
+      setProjects(newestFirst(proj));
       setTechnologies(tech);
       setSocials(soc);
 

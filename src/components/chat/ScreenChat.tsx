@@ -32,7 +32,7 @@ const ScreenChat = ({
   translucent?: boolean;
   chatPublic: TChatPublicSettings;
 }) => {
-  const { messages, busy, error, send } = useChatSession({
+  const { messages, busy, error, status, send } = useChatSession({
     greeting: chatPublic.greeting,
   });
   const [input, setInput] = useState("");
@@ -69,20 +69,38 @@ const ScreenChat = ({
           compact ? "text-[13px]" : "text-[11px] leading-tight"
         }`}
       >
-        {messages.map((m, i) => (
-          <p
-            key={i}
-            className={`whitespace-pre-wrap break-words ${
-              m.role === "user" ? "text-white" : "text-[#00df9a]"
-            }`}
-          >
-            <span className="opacity-60">{m.role === "user" ? "> " : "$ "}</span>
-            {m.content}
-            {busy && i === messages.length - 1 && m.role === "assistant" && (
-              <span className="animate-pulse">▍</span>
-            )}
-          </p>
-        ))}
+        {messages.map((m, i) => {
+          const isLastAssistant =
+            i === messages.length - 1 && m.role === "assistant";
+          // While waiting on the model (incl. multi-second tool round-
+          // trips) with nothing revealed yet, show the progress line
+          // ("$ thinking…", "$ looking up my most recent role…") in place
+          // of a bare blinking cursor.
+          const showStatus = busy && isLastAssistant && !m.content && status;
+          return (
+            <p
+              key={i}
+              className={`whitespace-pre-wrap break-words ${
+                m.role === "user" ? "text-white" : "text-[#00df9a]"
+              }`}
+            >
+              <span className="opacity-60">{m.role === "user" ? "> " : "$ "}</span>
+              {showStatus ? (
+                <span className="opacity-70">
+                  {status.label.toLowerCase()}
+                  <span className="animate-pulse">…</span>
+                </span>
+              ) : (
+                <>
+                  {m.content}
+                  {busy && isLastAssistant && (
+                    <span className="animate-pulse">▍</span>
+                  )}
+                </>
+              )}
+            </p>
+          );
+        })}
         {error && <p className="text-red-400">! {error}</p>}
       </div>
 

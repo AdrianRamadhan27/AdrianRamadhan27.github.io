@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { streamChat, type ChatMessage } from "../lib/chatClient";
+import { streamChat, type ChatMessage, type ChatStatus } from "../lib/chatClient";
 import { createTypewriter, type Typewriter } from "../lib/typewriter";
 import { createGestureStripper, type GestureName } from "../lib/gestureTags";
 
@@ -41,6 +41,11 @@ export function useChatSession({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Non-null only while a reply is being worked on and no visible text has
+  // arrived yet -- "Thinking", "Looking up my most recent role", etc. The
+  // `chat` function streams these during tool round-trips (see
+  // toolLoop.ts); cleared the moment real content starts revealing.
+  const [status, setStatus] = useState<ChatStatus | null>(null);
 
   // Mirrors `messages` synchronously. `send` needs the current history at
   // the instant it's called to build the request to the model -- reading
@@ -113,6 +118,7 @@ export function useChatSession({
     abortRef.current?.abort();
     typerRef.current?.cancel();
     setBusy(false);
+    setStatus(null);
   }, []);
 
   const send = useCallback(async (text: string) => {
@@ -126,6 +132,7 @@ export function useChatSession({
     setMessagesAndRef(nextHistory);
     setBusy(true);
     setError(null);
+    setStatus({ kind: "thinking", label: "Thinking" });
     setMessagesAndRef((m) => [...m, { role: "assistant", content: "" }]);
 
     const abortController = new AbortController();
@@ -148,13 +155,17 @@ export function useChatSession({
       await streamChat(
         nextHistory,
         (chunk) => {
+          setStatus(null); // real text now -- drop the "Thinking…" line
           const visible = stripper.push(chunk);
           if (visible) {
             fullText += visible;
             typer.push(visible);
           }
         },
-        { signal: abortController.signal }
+        {
+          signal: abortController.signal,
+          onStatus: (s) => setStatus(s),
+        }
       );
       const rest = stripper.flush();
       if (rest) {
@@ -184,8 +195,9 @@ export function useChatSession({
       }
     } finally {
       setBusy(false);
+      setStatus(null);
     }
   }, [busy, setMessagesAndRef]);
 
-  return { messages, busy, error, send, cancel, revealGreeting };
+  return { messages, busy, error, status, send, cancel, revealGreeting };
 }

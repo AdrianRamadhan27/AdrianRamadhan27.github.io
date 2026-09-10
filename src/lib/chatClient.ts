@@ -1,5 +1,11 @@
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
+// Progress updates the `chat` function interleaves with content while it
+// runs tool calls (see supabase/functions/chat/toolLoop.ts) -- shown in
+// the UI as "Thinking…" / "Looking up my most recent role…" so a
+// multi-second tool round-trip isn't just a frozen cursor.
+export type ChatStatus = { kind: "thinking" | "tool"; label: string };
+
 // Streams a response from the `chat` edge function (which itself proxies an
 // OpenAI-compatible /chat/completions SSE stream) and calls onDelta with each
 // incremental chunk of assistant text as it arrives.
@@ -12,7 +18,7 @@ export type ChatMessage = { role: "user" | "assistant"; content: string };
 export async function streamChat(
   history: ChatMessage[],
   onDelta: (chunk: string) => void,
-  opts: { signal?: AbortSignal } = {}
+  opts: { signal?: AbortSignal; onStatus?: (status: ChatStatus) => void } = {}
 ): Promise<void> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -83,6 +89,10 @@ export async function streamChat(
 
       try {
         const json = JSON.parse(payload);
+        if (json.status) {
+          opts.onStatus?.(json.status as ChatStatus);
+          continue;
+        }
         const delta = json.choices?.[0]?.delta?.content;
         if (delta) {
           receivedAny = true;

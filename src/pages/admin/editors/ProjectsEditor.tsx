@@ -59,10 +59,14 @@ const ProjectsEditor = () => {
 
   const load = async () => {
     if (!supabase) return;
+    // Newest first (descending sort_order) so a just-added project is at
+    // the top, no scrolling. The DB stores ascending = chronological;
+    // only this list is flipped. handleMove/handleAdd keep `rows` in this
+    // same newest-first order.
     const { data } = await supabase
       .from("projects")
       .select("*")
-      .order("sort_order", { ascending: true });
+      .order("sort_order", { ascending: false });
     const list = (data as Row[]) ?? [];
     setRows(list);
     setTagsText(
@@ -88,7 +92,8 @@ const ProjectsEditor = () => {
       .select()
       .single();
     if (!error && data) {
-      setRows((rs) => [...rs, data as Row]);
+      // Highest sort_order -> newest -> top of the newest-first list.
+      setRows((rs) => [data as Row, ...rs]);
       setTagsText((t) => ({ ...t, [(data as Row).id]: "" }));
     }
   };
@@ -116,7 +121,8 @@ const ProjectsEditor = () => {
     const updated = [...rows];
     updated[index] = { ...b, sort_order: a.sort_order };
     updated[target] = { ...a, sort_order: b.sort_order };
-    setRows(updated.sort((x, y) => x.sort_order - y.sort_order));
+    // Descending -- this list is newest-first (see load()).
+    setRows(updated.sort((x, y) => y.sort_order - x.sort_order));
     await Promise.all([
       supabase.from("projects").update({ sort_order: b.sort_order }).eq("id", a.id),
       supabase.from("projects").update({ sort_order: a.sort_order }).eq("id", b.id),
@@ -146,6 +152,11 @@ const ProjectsEditor = () => {
           + Add project
         </button>
       </div>
+
+      <p className="text-secondary mb-4 text-[13px]">
+        Listed newest first — new projects appear at the top. Use ↑ / ↓ to
+        reorder (↑ = more recent).
+      </p>
 
       {status && <p className="text-secondary mb-4 text-[13px]">{status}</p>}
 

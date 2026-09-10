@@ -198,6 +198,42 @@ function executeTool(
   return JSON.stringify({ error: `Unknown tool: ${name}` });
 }
 
+// The human-readable "…" line shown in the chat UI while a tool call runs.
+// Resolves the index against the real directory so it can name the entry
+// ("Looking up my most recent role", "Looking up the Applicient project")
+// rather than a generic "reading a record".
+function describeToolCall(
+  name: string,
+  argsJson: string,
+  experiences: Record<string, unknown>[],
+  projects: Record<string, unknown>[]
+): string {
+  let index = NaN;
+  try {
+    const parsed = JSON.parse(argsJson || "{}");
+    if (typeof parsed.index === "number") index = parsed.index;
+  } catch {
+    /* generic label below */
+  }
+
+  if (name === "get_experience") {
+    const e = pickByIndex(experiences, index);
+    const title = e ? String(e.title ?? "") : "";
+    const company = e ? String(e.company_name ?? "") : "";
+    if (title && company) return `Looking up ${title} at ${company}`;
+    if (index === -1) return "Looking up my most recent role";
+    return "Looking up my work experience";
+  }
+  if (name === "get_project") {
+    const p = pickByIndex(projects, index);
+    const projectName = p ? String(p.name ?? "") : "";
+    if (projectName) return `Looking up the ${projectName} project`;
+    if (index === -1) return "Looking up my latest project";
+    return "Looking up my projects";
+  }
+  return "Looking something up";
+}
+
 Deno.serve(async (req) => {
   const preflight = handleOptions(req);
   if (preflight) return preflight;
@@ -352,9 +388,18 @@ Deno.serve(async (req) => {
           maxTokens,
           tools: TOOLS,
           executeTool: (name, argsJson) => executeTool(name, argsJson, experiencesArr, projectsArr),
+          describeTool: (name, argsJson) =>
+            describeToolCall(name, argsJson, experiencesArr, projectsArr),
           onContentChunk: (text) => {
             const frame = `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
             controller.enqueue(encoder.encode(frame));
+          },
+          onStatus: (event) => {
+            // Distinct frame shape from a content delta -- the client
+            // (chatClient.ts) routes on `status` vs `choices[].delta`.
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ status: event })}\n\n`)
+            );
           },
           messages,
           firstResponse: first.response,

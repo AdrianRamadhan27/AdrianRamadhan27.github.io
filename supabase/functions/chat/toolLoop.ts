@@ -19,6 +19,12 @@
 
 export type UpstreamToolCall = { id: string; name: string; arguments: string };
 
+// Progress events pushed to the client-facing stream alongside content, so
+// the chat UI can show "Thinking…" / "Looking up work experience…" instead
+// of an inscrutable blinking cursor during the (potentially multi-second)
+// tool round-trips -- see continueChatCompletion + index.ts's onStatus.
+export type StatusEvent = { kind: "thinking" | "tool"; label: string };
+
 export type UpstreamMessage =
   | { role: "system" | "user" | "assistant"; content: string }
   | { role: "assistant"; content: null; tool_calls: ToolCallWire[] }
@@ -188,6 +194,20 @@ export async function callUpstream(
 // failure, by contrast, happens after streaming has already committed to
 // a 200, so it just stops quietly -- the existing client already treats a
 // content-free stream as "the model returned an empty response").
+//
+// Each round's content is BUFFERED, not forwarded live: a round either
+// ends in tool calls or in the real answer, and we can't tell which until
+// its stream finishes. Many models narrate ("Let me check my most recent
+// role…") right before emitting a tool call in the same turn -- forwarding
+// that live meant the visitor saw the narration and then, because the old
+// `contentSeen` short-circuit treated any content as "answer done", the
+// reply just stopped there and the tool call was silently dropped. Now a
+// round that ends in tool calls has its buffered narration discarded and
+// replaced with a status line; only a round that ends WITHOUT tool calls
+// flushes its buffer as the answer. Not streaming the network
+// chunk-by-chunk is invisible here: the client reveals text with a
+// typewriter whose pace is already decoupled from arrival, and replies
+// are capped at ~1k tokens.
 export async function continueChatCompletion(opts: {
   fetchImpl: typeof fetch;
   url: string;
@@ -198,6 +218,13 @@ export async function continueChatCompletion(opts: {
   tools: ToolDefinition[];
   executeTool: ToolExecutor;
   onContentChunk: (text: string) => void;
+  /** Progress updates for the UI (see StatusEvent). Optional so a plain
+   *  Node test of this file can omit it. */
+  onStatus?: (event: StatusEvent) => void;
+  /** Turns a tool call into the human label shown while it runs, e.g.
+   *  get_experience(-1) -> "Looking up my most recent role". index.ts
+   *  supplies this since it owns what the tools mean. */
+  describeTool?: (name: string, argsJson: string) => string;
   messages: UpstreamMessage[];
   firstResponse: Response;
   firstUsedTools: boolean;
@@ -206,14 +233,21 @@ export async function continueChatCompletion(opts: {
   let usedTools = opts.firstUsedTools;
   const messages = opts.messages.slice();
 
+  opts.onStatus?.({ kind: "thinking", label: "Thinking" });
+
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     if (!response.body) return;
-    const { contentSeen, toolCalls } = await pumpStream(response.body, opts.onContentChunk);
 
-    if (contentSeen || toolCalls.length === 0) {
-      // Either a real answer streamed through already, or the response had
-      // neither content nor tool calls (an empty completion) -- nothing
-      // left to drive.
+    let roundText = "";
+    const { toolCalls } = await pumpStream(response.body, (t) => {
+      roundText += t;
+    });
+
+    if (toolCalls.length === 0) {
+      // No tool calls -> this round's text IS the answer (or it's an empty
+      // completion, in which case flushing "" is a no-op and the client
+      // surfaces its own "empty response" error).
+      if (roundText) opts.onContentChunk(roundText);
       return;
     }
 
@@ -223,11 +257,22 @@ export async function continueChatCompletion(opts: {
     // answer on the round that requested it) would make the loop fetch one
     // response too many: the `for` condition fails right after this
     // iteration, so that response's body would never be pumped OR closed.
-    if (round === MAX_TOOL_ROUNDS - 1) return;
+    // Flush any buffered text first so a model that narrated instead of
+    // answering still shows *something* rather than a blank reply.
+    if (round === MAX_TOOL_ROUNDS - 1) {
+      if (roundText) opts.onContentChunk(roundText);
+      return;
+    }
 
-    // Tool-call round: echo the assistant's tool_calls back verbatim (the
-    // exact shape providers require), then one "tool" result message per
-    // call, and ask again with those results now in context.
+    // Tool-call round: announce each call, echo the assistant's tool_calls
+    // back verbatim (the exact shape providers require), then one "tool"
+    // result message per call, and ask again with those results in context.
+    for (const call of toolCalls) {
+      opts.onStatus?.({
+        kind: "tool",
+        label: opts.describeTool?.(call.name, call.arguments) ?? "Looking something up",
+      });
+    }
     messages.push({
       role: "assistant",
       content: null,
@@ -240,6 +285,7 @@ export async function continueChatCompletion(opts: {
         content: opts.executeTool(call.name, call.arguments),
       });
     }
+    opts.onStatus?.({ kind: "thinking", label: "Putting that together" });
 
     const isLastRound = round === MAX_TOOL_ROUNDS - 2;
     const next = await callUpstream(opts.fetchImpl, opts.url, opts.apiKey, {

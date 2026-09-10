@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { FaVolumeMute, FaVolumeUp } from "react-icons/fa";
 
 import AvatarCanvas, { type AvatarController } from "./Avatar";
 import FlipAvatar from "./FlipAvatar";
 import SpeechBubble from "../chat/SpeechBubble";
 import ChatInputBar from "../chat/ChatInputBar";
-import { ChatBubbleIcon, ChevronDownIcon } from "../chat/dockIcons";
+import { ChatBubbleIcon } from "../chat/dockIcons";
 import { useChatSession } from "../../hooks/useChatSession";
 import { useContent } from "../../hooks/useContent";
 import { useIsMobile } from "../../hooks/useIsMobile";
@@ -64,6 +65,20 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
   // reopen button. Meaningless (unread) outside the `docked` branch below.
   const [minimized, setMinimized] = useState(false);
 
+  // Client-side voice (TTS) switch, on top of the chatPublic.voiceEnabled
+  // CMS master switch. Starts OFF so the page never makes noise on load,
+  // then flips ON by itself the first time the visitor interacts with the
+  // chat (unlockAudio below) -- unless they've already toggled it by hand,
+  // in which case their choice sticks (voiceChoiceMadeRef). Read through a
+  // ref in speak() since that's called from stale callbacks.
+  const [voiceOn, setVoiceOn] = useState(false);
+  const voiceOnRef = useRef(false);
+  const voiceChoiceMadeRef = useRef(false);
+  const setVoice = (on: boolean) => {
+    voiceOnRef.current = on;
+    setVoiceOn(on);
+  };
+
   if (!playerRef.current) playerRef.current = new AudioStreamPlayer();
 
   // Drives mouthOpen every animation frame from whatever's currently
@@ -116,6 +131,11 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
     if (audioUnlockedRef.current) return;
     audioUnlockedRef.current = true;
     void playerRef.current?.ensureReady();
+    // First interaction -> voice defaults ON (unless the visitor already
+    // set it themselves via the toggle). speak()'s own guards still apply.
+    if (!voiceChoiceMadeRef.current && chatPublic.voiceEnabled) {
+      setVoice(true);
+    }
     if (!greetingSpokenRef.current && chatPublic.greeting.trim()) {
       greetingSpokenRef.current = true;
       revealGreeting();
@@ -123,8 +143,26 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
     }
   };
 
+  // The mute/unmute button. Also counts as unlocking audio (real user
+  // gesture), and stops any in-flight speech immediately when muting.
+  const toggleVoice = () => {
+    voiceChoiceMadeRef.current = true;
+    const next = !voiceOnRef.current;
+    setVoice(next);
+    if (next) {
+      unlockAudio();
+    } else {
+      playerRef.current?.stop();
+      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+      usingFallbackRef.current = false;
+      fallbackMouthRef.current = 0;
+      avatarRef.current?.setSpeaking(false);
+      avatarRef.current?.setMouthOpen(0);
+    }
+  };
+
   const speak = async (text: string) => {
-    if (!chatPublic.voiceEnabled || !text.trim()) return;
+    if (!chatPublic.voiceEnabled || !voiceOnRef.current || !text.trim()) return;
     const player = playerRef.current;
     avatarRef.current?.setSpeaking(true);
     try {
@@ -173,7 +211,7 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
     avatarRef.current?.triggerGesture(name);
   };
 
-  const { messages, busy, error, send, revealGreeting } = useChatSession({
+  const { messages, busy, error, status, send, revealGreeting } = useChatSession({
     greeting: chatPublic.greeting,
     onGesture: handleGesture,
     onReplyDone: (fullText) => {
@@ -190,6 +228,16 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
     unlockAudio();
     void send(text);
   };
+
+  // In-hero speech bubble: dismissable so a long reply doesn't cover the
+  // hero. Re-shown automatically whenever a new reply starts (busy rising
+  // edge) -- asking a question means you want to see its answer.
+  const [bubbleHidden, setBubbleHidden] = useState(false);
+  const prevBusyRef = useRef(false);
+  useEffect(() => {
+    if (busy && !prevBusyRef.current) setBubbleHidden(false);
+    prevBusyRef.current = busy;
+  }, [busy]);
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
 
@@ -233,8 +281,43 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
     );
   }
 
+  // Mute/unmute -- only offered when the CMS has voice enabled at all
+  // (nothing to toggle otherwise). In the hero it sits left of the text
+  // input; in the docked widget it's up in the top-right control cluster
+  // next to the hide button.
+  const voiceToggle = chatPublic.voiceEnabled ? (
+    <button
+      type="button"
+      onClick={toggleVoice}
+      aria-label={voiceOn ? "Mute the assistant's voice" : "Unmute the assistant's voice"}
+      aria-pressed={voiceOn}
+      title={voiceOn ? "Voice on" : "Voice off"}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
+        voiceOn
+          ? "border-accent/40 bg-accent/15 text-accent hover:bg-accent/25"
+          : "border-accent/20 bg-tertiary/70 text-secondary hover:text-white"
+      }`}
+    >
+      {voiceOn ? <FaVolumeUp className="h-4 w-4" /> : <FaVolumeMute className="h-4 w-4" />}
+    </button>
+  ) : null;
+
   const chatInput = <ChatInputBar onSend={handleSend} disabled={busy} />;
-  const bubble = <SpeechBubble text={lastAssistant?.content ?? ""} busy={busy} error={error} />;
+  // Hero layouts: voice toggle + input on one row.
+  const chatInputRow = (
+    <div className="flex items-center gap-2">
+      {voiceToggle}
+      <div className="min-w-0 flex-1">{chatInput}</div>
+    </div>
+  );
+  const bubble = (
+    <SpeechBubble
+      text={lastAssistant?.content ?? ""}
+      busy={busy}
+      error={error}
+      status={status}
+    />
+  );
   // Stretches to match the input bar's own width below it (both layouts
   // below give this the same "w-full max-w-md" wrapper the input already
   // uses) instead of shrinking to its own text content and ending up
@@ -242,19 +325,43 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
   // keeps the narrow default `bubble` -- it sits snug next to the avatar
   // crop there, not stacked above a same-width input.
   const wideBubble = (
-    <SpeechBubble text={lastAssistant?.content ?? ""} busy={busy} error={error} widthClassName="w-full" />
+    <SpeechBubble
+      text={lastAssistant?.content ?? ""}
+      busy={busy}
+      error={error}
+      status={status}
+      onClose={() => setBubbleHidden(true)}
+      widthClassName="w-full"
+    />
   );
+  // Shown in place of the in-hero bubble once it's been dismissed, so the
+  // last reply is still one tap away without covering anything.
+  const showBubbleButton = (
+    <button
+      type="button"
+      onClick={() => setBubbleHidden(false)}
+      className="border-accent/25 bg-tertiary/55 text-secondary hover:text-accent pointer-events-auto rounded-full border px-3 py-1 text-[12px] backdrop-blur-md transition-colors"
+    >
+      Show reply
+    </button>
+  );
+  const heroBubble =
+    bubbleHidden && lastAssistant?.content ? showBubbleButton : wideBubble;
 
   if (docked) {
     if (minimized) {
+      // Same pill treatment as the hero's dismissed-bubble "Show reply"
+      // button (bg-tertiary + accent border + backdrop-blur), just with an
+      // icon + label and a bit more presence since it's the only way back.
       return (
         <button
           type="button"
           onClick={() => setMinimized(false)}
           aria-label="Open chat"
-          className="bg-accent hover:bg-accent-dim fixed bottom-8 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-black shadow-xl transition-transform hover:scale-105"
+          className="border-accent/25 bg-tertiary/70 text-secondary hover:text-accent fixed bottom-8 right-4 z-40 flex items-center gap-2 rounded-full border px-4 py-2 text-[13px] shadow-xl backdrop-blur-md transition-colors"
         >
-          <ChatBubbleIcon className="h-6 w-6" />
+          <ChatBubbleIcon className="h-4 w-4" />
+          Chat
         </button>
       );
     }
@@ -269,18 +376,31 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
       // so the avatar crop and input stay fixed-size and always reachable
       // rather than being pushed off or scrolling away with a long reply.
       <div
-        className="border-accent/30 bg-tertiary/40 animate-pop fixed bottom-8 right-4 z-40 flex max-h-[75vh] w-64 flex-col gap-2 rounded-2xl border p-3 pt-8 shadow-xl backdrop-blur-md sm:w-72"
+        className="border-accent/30 bg-tertiary/40 animate-pop fixed bottom-8 right-4 z-40 flex max-h-[75vh] w-64 flex-col gap-2 rounded-2xl border p-3 pt-9 shadow-xl backdrop-blur-md sm:w-72"
         onPointerDownCapture={unlockAudio}
         onKeyDownCapture={unlockAudio}
       >
-        <button
-          type="button"
-          onClick={() => setMinimized(true)}
-          aria-label="Minimize chat"
-          className="text-secondary hover:text-accent absolute right-2 top-2 flex h-6 w-6 items-center justify-center"
-        >
-          <ChevronDownIcon className="h-4 w-4" />
-        </button>
+        {/* Top-right control cluster: mute/unmute + hide-the-whole-widget.
+            The hide button uses the same circular translucent design as
+            the hero's bubble close button (SpeechBubble). */}
+        <div className="absolute right-2 top-2 flex items-center gap-1.5">
+          {voiceToggle}
+          <button
+            type="button"
+            onClick={() => setMinimized(true)}
+            aria-label="Hide chat"
+            className="border-accent/25 bg-tertiary/90 text-secondary hover:text-accent hover:bg-tertiary flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-md transition-colors"
+          >
+            <svg viewBox="0 0 24 24" className="h-3 w-3" aria-hidden="true">
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                stroke="currentColor"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
 
         <div className="flex w-full items-end justify-end gap-2">
           <div className="max-h-40 overflow-y-auto">{bubble}</div>
@@ -337,8 +457,8 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
             className="h-full w-full"
           />
         </div>
-        <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{wideBubble}</div>
-        <div className="w-full max-w-md">{chatInput}</div>
+        <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{heroBubble}</div>
+        <div className="w-full max-w-md">{chatInputRow}</div>
       </div>
     );
   }
@@ -385,8 +505,8 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
           that growth and makes it scrollable instead, while leaving the
           avatar crop and input bar below it fixed-size and undisturbed. */}
       <div className="absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-3 px-4 sm:bottom-10 sm:px-12">
-        <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{wideBubble}</div>
-        <div className="w-full max-w-md">{chatInput}</div>
+        <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{heroBubble}</div>
+        <div className="w-full max-w-md">{chatInputRow}</div>
       </div>
     </div>
   );
