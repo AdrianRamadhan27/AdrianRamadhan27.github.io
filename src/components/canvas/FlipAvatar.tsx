@@ -5,13 +5,14 @@ import {
   useRef,
   useState,
 } from "react";
+import Tilt from "react-parallax-tilt";
 
 import AvatarCanvas, { type AvatarController } from "./Avatar";
 
 // First flip is quick -- photo shows just long enough to register, then
 // turns to the avatar. Every flip after that is on the slow cadence, so
 // the two just trade places occasionally rather than constantly spinning.
-const INITIAL_FLIP_DELAY_MS = 4000;
+const INITIAL_FLIP_DELAY_MS = 1500;
 const PERIODIC_FLIP_MS = 45000;
 // After the ~0.85s card flip + the figure's synced turn have both landed,
 // so the wave reads as a forward-facing hello, not a sideways one mid-turn.
@@ -105,14 +106,30 @@ const FlipAvatar = forwardRef<AvatarController, Props>(
               onClick={() => setShowAvatar(true)}
               className="hero-flip-face green-pink-gradient shadow-card block cursor-pointer rounded-[24px] p-[3px]"
             >
-              <img
-                src={photoUrl}
-                alt=""
-                className="h-full w-full rounded-[22px] object-cover object-top"
-                style={{
-                  filter: "grayscale(0.3) contrast(1.05) saturate(1.15)",
-                }}
-              />
+              {/* Same parallax-tilt + green glare the portrait had on the
+                  About page. Wraps only the image, not the flip face
+                  itself -- the face carries the card's own rotateY flip
+                  state, and a second 3D transform on the same element
+                  would fight it. The face is only ever hovered while the
+                  card is flat (photo showing), so the two never overlap. */}
+              <Tilt
+                glareEnable
+                tiltEnable
+                tiltMaxAngleX={8}
+                tiltMaxAngleY={8}
+                glareColor="#00df9a"
+                glareMaxOpacity={0.35}
+                className="h-full w-full overflow-hidden rounded-[22px]"
+              >
+                <img
+                  src={photoUrl}
+                  alt=""
+                  className="h-full w-full rounded-[22px] object-cover object-top"
+                  style={{
+                    filter: "grayscale(0.3) contrast(1.05) saturate(1.15)",
+                  }}
+                />
+              </Tilt>
             </button>
 
             <div className="hero-flip-face hero-flip-face--back">

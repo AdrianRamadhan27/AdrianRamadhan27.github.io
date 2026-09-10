@@ -40,7 +40,7 @@ const MOBILE_BREAKPOINT_PX = 640;
 // node; the GLB is drei-cached so this is a quick re-parse, not a refetch,
 // and only the avatar's pose/animation state, not the conversation, resets).
 const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
-  const { chatPublic, profile } = useContent();
+  const { chatPublic, profile, loading } = useContent();
   const isMobile = useIsMobile(MOBILE_BREAKPOINT_PX);
   const avatarRef = useRef<AvatarController>(null);
   const playerRef = useRef<AudioStreamPlayer | null>(null);
@@ -193,7 +193,11 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
 
-  if (!chatPublic.enabled) {
+  // !loading, not just !enabled: chatPublic starts as the disabled default
+  // for the ~200ms before chat_settings_public resolves, so gating only on
+  // `enabled` flashed this "not configured" notice on every load. Once
+  // loading is done, a still-disabled chat shows it for real.
+  if (!loading && !chatPublic.enabled) {
     const disabledNotice = (
       <div className="border-accent/30 bg-tertiary/90 rounded-2xl border px-4 py-3 text-center">
         <p className="text-secondary text-[13px]">The chatbot isn't configured yet.</p>
@@ -218,7 +222,7 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
         <FlipAvatar
           avatarUrl={chatPublic.avatarUrl}
           photoUrl={profile.photoUrl}
-          className="absolute bottom-[15%] right-[9%] z-0 aspect-[2/3] h-[58%] w-auto sm:h-[64%] lg:h-[58%]"
+          className="absolute right-[var(--hero-photo-right-gap,15%)] top-[var(--hero-photo-top,24%)] z-0 aspect-[2/3] h-[var(--hero-photo-height,54%)] w-auto"
         />
         <div className="absolute inset-x-0 bottom-8 flex justify-center px-4">
           {disabledNotice}
@@ -342,28 +346,26 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
       onPointerDownCapture={unlockAudio}
       onKeyDownCapture={unlockAudio}
     >
-      {/* Anchored to the bottom-right corner and sized well under the full
-          hero, rather than filling it -- the hero heading ("Hi, I'm ...")
-          lives in a full-bleed overlay too (see Hero.tsx), left-aligned in
-          the top-left; a full-size, auto-centered avatar sat directly
-          behind/under it. z-0 makes stacking explicit rather than relying
-          on default paint order, matching the z-10 convention Hero.tsx
-          already uses for its own text-over-canvas overlay. bottom-[18%],
-          not bottom-0: leaves the canvas's own bounding box (which extends
-          well below the rendered figure -- Bounds frames with margin, so
-          there's transparent canvas space beneath the feet) clear of the
-          bubble/input strip entirely, rather than trusting z-index alone
-          against a transparent-but-still-hit-testable canvas underneath. */}
-      {/* Portrait aspect box (w derived from h via aspect-[2/3]) so the
-          photo and the avatar share one upright frame -- the avatar reads
-          as a standing figure and the photo isn't cropped landscape.
-          right-[9%], not right-0: pulled in off the hero's edge so it
-          sits within the right-side space rather than hugging it. */}
+      {/* Placed to sit alongside the hero text rather than filling the
+          hero (the heading/subtext/stats live in a full-bleed z-10 overlay
+          -- see Hero.tsx -- and a full-size auto-centred avatar sat
+          directly under them). z-0 makes that stacking explicit.
+
+          top / height / right come from CSS custom properties Hero.tsx
+          measures and sets on the <section> every layout: --hero-photo-top
+          is the top of the subtext line, --hero-photo-height reaches down
+          to the bottom of the stats card, and --hero-photo-right-gap is
+          the distance from the section's right edge to the end of the
+          name, so the card's right edge lines up with it. The literal
+          fallbacks (15% / 24% / 54%) only apply for the one frame before
+          that effect first runs. Width is derived from height by
+          aspect-[2/3] -- one upright portrait frame the photo and the
+          standing avatar figure both sit in. */}
       <FlipAvatar
         ref={avatarRef}
         avatarUrl={chatPublic.avatarUrl}
         photoUrl={profile.photoUrl}
-        className="animate-pop absolute bottom-[15%] right-[9%] z-0 aspect-[2/3] h-[58%] w-auto sm:h-[64%] lg:h-[58%]"
+        className="animate-pop absolute right-[var(--hero-photo-right-gap,15%)] top-[var(--hero-photo-top,24%)] z-0 aspect-[2/3] h-[var(--hero-photo-height,54%)] w-auto"
       />
 
       {/* Bubble sits directly above the input bar, both anchored to the

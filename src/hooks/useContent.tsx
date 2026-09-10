@@ -45,7 +45,20 @@ const defaultProfile: TProfile = {
 
 const defaultChatPublic: TChatPublicSettings = {
   enabled: false,
-  greeting: "Hi! This terminal isn't wired up to a model yet.",
+  // Empty, NOT a "not configured yet" line: this value is only ever live
+  // during the brief window before the chat_settings_public fetch
+  // resolves. useChatSession seeds whatever greeting it's handed on mount
+  // (holdGreeting isn't set until voiceEnabled is known, which is also
+  // still false here), so a non-empty default here was getting typed into
+  // the bubble and then stuck there -- once the real settings arrive,
+  // holdGreeting flips true and the auto-reveal stops re-running, so the
+  // stale line stayed visible until the visitor's first interaction.
+  // Empty means revealGreeting() no-ops during that window (it early
+  // returns on a falsy greeting) and the real greeting reveals cleanly
+  // once it's known. When Supabase is genuinely unreachable, enabled stays
+  // false and the hero shows its own "not configured" notice instead, so
+  // nothing depends on this string carrying that message.
+  greeting: "",
   model: "",
   heroVariant: "avatar",
   voiceEnabled: false,

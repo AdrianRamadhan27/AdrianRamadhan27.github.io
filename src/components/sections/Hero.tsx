@@ -23,6 +23,22 @@ const Hero = () => {
   // rather than as soon as it starts leaving.
   const [docked, setDocked] = useState(false);
 
+  // Anchors the avatar/photo flip card (rendered in the sibling
+  // AvatarExperience, a separate component for chat-state reasons) to the
+  // hero text on its left: its top lines up with the top of the subtext
+  // line, its bottom with the bottom of the stats card, and its right
+  // edge with the end of the name. Those three are laid out by flex/margin
+  // flow and their exact pixel positions depend on font metrics, viewport
+  // width and how the name wraps, so there's no static top/right/height to
+  // hardcode -- measure them against the section box and hand the result
+  // to the card as CSS custom properties (it falls back to rough
+  // percentages until this first runs). Desktop only; below sm the hero
+  // is a normal-flow stack with its own layout.
+  const subTextRef = useRef<HTMLParagraphElement>(null);
+  const nameRef = useRef<HTMLSpanElement>(null);
+  const statsWrapRef = useRef<HTMLDivElement>(null);
+  const socialWrapRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
@@ -32,6 +48,52 @@ const Hero = () => {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const measure = () => {
+      const p = subTextRef.current;
+      const name = nameRef.current;
+      if (!p || !name) return;
+      const s = section.getBoundingClientRect();
+      const pr = p.getBoundingClientRect();
+      const nr = name.getBoundingClientRect();
+      // Prefer the stats card's bottom; if the CMS has no stats numbers
+      // set, HeroStats renders nothing (zero-height wrapper) -- fall back
+      // to the social embeds' bottom so the card still has a real anchor.
+      const stats = statsWrapRef.current;
+      const bottomEl =
+        stats && stats.getBoundingClientRect().height > 4
+          ? stats
+          : socialWrapRef.current;
+      const bottom = (bottomEl?.getBoundingClientRect().bottom ?? pr.bottom) - s.top;
+      const top = pr.top - s.top;
+
+      section.style.setProperty("--hero-photo-top", `${Math.round(top)}px`);
+      section.style.setProperty("--hero-photo-height", `${Math.round(bottom - top)}px`);
+      section.style.setProperty(
+        "--hero-photo-right-gap",
+        `${Math.round(s.width - (nr.right - s.left))}px`
+      );
+    };
+
+    measure();
+    // Fonts finishing loading reflows the head/subtext after first paint.
+    if (document.fonts?.ready) document.fonts.ready.then(measure);
+    const ro = new ResizeObserver(measure);
+    ro.observe(section);
+    const col = subTextRef.current?.parentElement;
+    if (col) ro.observe(col);
+    return () => ro.disconnect();
+  }, [
+    loading,
+    profile.fullName,
+    profile.heroLines,
+    profile.yearsExperience,
+    profile.projectsDone,
+  ]);
 
   // min-h-screen alone lets mobile content (text + stacked chat panel) grow
   // taller than one viewport, but r3f's Canvas sizes itself via CSS
@@ -93,9 +155,11 @@ const Hero = () => {
             <>
               <h1 className={`${styles.heroHeadText} text-white`}>
                 Hi, I'm{" "}
-                <span className="text-accent">{profile.fullName}</span>
+                <span ref={nameRef} className="text-accent">
+                  {profile.fullName}
+                </span>
               </h1>
-              <p className={`${styles.heroSubText} text-white-100 mt-2`}>
+              <p ref={subTextRef} className={`${styles.heroSubText} text-white-100 mt-2`}>
                 {profile.heroLines.map((line, index) => (
                   <React.Fragment key={index}>
                     {line}
@@ -117,9 +181,17 @@ const Hero = () => {
             </button>
           )}
 
-          {!loading && <HeroSocialEmbeds className="mt-5" />}
+          {!loading && (
+            <div ref={socialWrapRef}>
+              <HeroSocialEmbeds className="mt-5" />
+            </div>
+          )}
 
-          {!loading && <HeroStats />}
+          {!loading && (
+            <div ref={statsWrapRef}>
+              <HeroStats />
+            </div>
+          )}
         </div>
       </div>
 
