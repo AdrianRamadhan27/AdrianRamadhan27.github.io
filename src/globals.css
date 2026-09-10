@@ -635,3 +635,38 @@
   transform: rotateY(0deg);
   pointer-events: auto;
 }
+
+/* hero-flip- : the hero's photo <-> 3D avatar card flip (see
+   FlipAvatar.tsx). Standard two-face CSS 3D card -- perspective on the
+   outer, preserve-3d + the rotateY toggle on the inner, and each face
+   backface-hidden so only whichever one currently faces the viewer is
+   painted and hit-tested. */
+.hero-flip {
+  perspective: 1600px;
+}
+.hero-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.85s cubic-bezier(0.45, 0.05, 0.2, 1);
+}
+.hero-flip-inner.is-flipped {
+  /* rotateY(180deg): the photo's right edge swings away on the way to the
+     avatar (photo "turns right"), and the reverse on the way back. The
+     avatar model's own turn (Avatar.tsx, targetTurn -PI -- opposite sign
+     because CSS and three.js wind opposite ways for the same on-screen
+     direction) is aimed to sweep the SAME visual way and over the same
+     ~0.85s, so card and figure move as one. To reverse: flip THIS sign
+     and targetTurn's sign together. */
+  transform: rotateY(180deg);
+}
+.hero-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.hero-flip-face--back {
+  transform: rotateY(180deg);
+}

@@ -262,7 +262,24 @@ export type AvatarController = {
   setSpeaking: (v: boolean) => void;
 };
 
-function AvatarModel({ url, state }: { url: string; state: AvatarState }) {
+function AvatarModel({
+  url,
+  state,
+  facing = "front",
+  onFigureClick,
+}: {
+  url: string;
+  state: AvatarState;
+  // "back" turns the whole figure ~180deg away from the camera; the
+  // useFrame loop below damps toward it. Used by FlipAvatar so that, as
+  // the photo<->avatar card flips, the avatar visibly turns around from
+  // back-to-back with the photo to facing the viewer, rather than just
+  // fading in already forward-facing.
+  facing?: "front" | "back";
+  // When provided, a click on the figure calls this instead of the
+  // default click-to-wave -- FlipAvatar uses it to flip back to the photo.
+  onFigureClick?: () => void;
+}) {
   const { scene, animations } = useGLTF(url);
   const hasClips = animations.length > 0;
 
@@ -458,6 +475,29 @@ function AvatarModel({ url, state }: { url: string; state: AvatarState }) {
       }
     }
 
+    // Turn-to-face: damped toward 0 (facing camera) or -PI (turned away).
+    // Applied to the root group, which no clip in this rig targets (clips
+    // animate bones, not the group's own transform), so this and the mixer
+    // don't fight. Bounds fitted the camera once on mount and doesn't
+    // re-measure per frame, so rotating the model here doesn't make it
+    // re-zoom mid-turn.
+    //
+    // -PI (not +PI): the CSS card and the three.js scene wind opposite
+    // ways for the same visual sweep, so the figure needs the opposite
+    // sign to turn the SAME on-screen direction as the photo card
+    // (.hero-flip-inner.is-flipped: rotateY(180deg), 0.85s). lambda ~3
+    // makes the turn take ~0.8s to match that transition's duration too,
+    // so card and figure land together as one continuous motion.
+    if (groupRef.current) {
+      const targetTurn = facing === "back" ? -Math.PI : 0;
+      groupRef.current.rotation.y = THREE.MathUtils.damp(
+        groupRef.current.rotation.y,
+        targetTurn,
+        3,
+        delta
+      );
+    }
+
     const lerpSpeed = 1 - Math.pow(0.001, delta); // frame-rate independent
     const targetMouthOpen = THREE.MathUtils.clamp(state.mouthOpen, 0, 1);
 
@@ -501,6 +541,10 @@ function AvatarModel({ url, state }: { url: string; state: AvatarState }) {
   });
 
   const handleClick = () => {
+    if (onFigureClick) {
+      onFigureClick();
+      return;
+    }
     if (!state.gesture) {
       state.gesture = "wave";
       state.gestureStartedAt = performance.now() / 1000;
@@ -514,8 +558,21 @@ function AvatarModel({ url, state }: { url: string; state: AvatarState }) {
   );
 }
 
-const AvatarCanvas = forwardRef<AvatarController, { avatarUrl?: string; className?: string }>(
-  ({ avatarUrl, className }, ref) => {
+const AvatarCanvas = forwardRef<
+  AvatarController,
+  {
+    avatarUrl?: string;
+    className?: string;
+    facing?: "front" | "back";
+    onFigureClick?: () => void;
+    // drei <Bounds> margin -- lower packs the figure tighter into the
+    // canvas. Default 1.05 suits the wide in-hero/mobile boxes; FlipAvatar
+    // overrides it lower because its portrait box is narrow enough that
+    // the default leaves the figure looking small and lost in it.
+    boundsMargin?: number;
+  }
+>(
+  ({ avatarUrl, className, facing, onFigureClick, boundsMargin = 1.05 }, ref) => {
     const state = useRef<AvatarState>({
       gesture: null,
       gestureStartedAt: 0,
@@ -641,8 +698,13 @@ const AvatarCanvas = forwardRef<AvatarController, { avatarUrl?: string; classNam
                   container itself animates in with is the only entrance
                   motion wanted; the camera should already be at its final,
                   correctly-framed position by the very first rendered frame. */}
-              <Bounds fit clip observe margin={1.05} maxDuration={0.001}>
-                <AvatarModel url={url} state={state} />
+              <Bounds fit clip observe margin={boundsMargin} maxDuration={0.001}>
+                <AvatarModel
+                  url={url}
+                  state={state}
+                  facing={facing}
+                  onFigureClick={onFigureClick}
+                />
               </Bounds>
             </Suspense>
           </Canvas>

@@ -36,7 +36,7 @@ const EMPTY: SettingsRow = {
   temperature: 0.7,
   max_tokens: 400,
   enabled: false,
-  hero_variant: "computer",
+  hero_variant: "avatar",
   avatar_path: null,
   voice_enabled: false,
   voice_base_url: "https://openrouter.ai/api/v1",

@@ -47,7 +47,7 @@ const defaultChatPublic: TChatPublicSettings = {
   enabled: false,
   greeting: "Hi! This terminal isn't wired up to a model yet.",
   model: "",
-  heroVariant: "computer",
+  heroVariant: "avatar",
   voiceEnabled: false,
 };
 
@@ -209,9 +209,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({
         // hero_variant is free text in the DB (no CHECK constraint -- see
         // schema.sql) even though the CMS only ever writes 'computer' or
         // 'avatar' via a radio; validate defensively so a stray/blank value
-        // can't render neither hero.
+        // can't render neither hero. Avatar is the default now, so anything
+        // that isn't explicitly 'computer' falls through to it.
         const heroVariant: THeroVariant =
-          row.hero_variant === "avatar" ? "avatar" : "computer";
+          row.hero_variant === "computer" ? "computer" : "avatar";
         setChatPublic({
           enabled: !!row.enabled,
           greeting: row.greeting ?? defaultChatPublic.greeting,

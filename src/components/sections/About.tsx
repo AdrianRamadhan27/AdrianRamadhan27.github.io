@@ -44,64 +44,29 @@ const ServiceCard: React.FC<IServiceCard> = ({ index, title, icon }) => (
   </Tilt>
 );
 
-const Portrait = ({ src }: { src: string }) => (
-  <Tilt
-    glareEnable
-    tiltEnable
-    tiltMaxAngleX={8}
-    tiltMaxAngleY={8}
-    glareColor="#00df9a"
-    className="mx-auto h-[380px] w-full max-w-[280px] shrink-0 md:mx-0 md:h-auto md:w-2/5 md:max-w-none md:self-stretch"
-  >
-    {/* Own initial/whileInView rather than inheriting from the section's
-        motion.section: this only mounts once profile.photoUrl resolves
-        from an async Supabase fetch, often well after the section's own
-        scroll-triggered reveal already fired (and, with viewport once:true,
-        disconnected). A late-mounting child that just inherits variant
-        context doesn't get told to animate in when that happens -- it
-        renders straight into its "hidden" values (opacity:0, off to the
-        side) and stays there forever, since nothing ever re-fires. */}
-    <motion.div
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount: "some" }}
-      variants={fadeIn("left", "spring", 0.1, 0.9)}
-      className="green-pink-gradient shadow-card h-full rounded-[24px] p-[3px]"
-    >
-      <img
-        src={src}
-        alt="Portrait"
-        className="h-full w-full rounded-[22px] object-cover"
-        style={{ filter: "grayscale(0.3) contrast(1.05) saturate(1.15)" }}
-      />
-    </motion.div>
-  </Tilt>
-);
-
 const About = () => {
   const { profile } = useContent();
 
+  // The portrait that used to sit here moved to the hero, where it now
+  // shares the 3D avatar's spot as a photo<->avatar flip card (see
+  // FlipAvatar.tsx). About is intro copy + the service cards only now.
   return (
     <>
       <Header useMotion={true} {...config.sections.about} />
 
-      <div className="mt-8 flex flex-col-reverse gap-10 md:flex-row md:items-stretch">
-        <div className="flex-1">
-          <motion.p
-            variants={fadeIn("", "", 0.1, 1)}
-            className="text-secondary text-[17px] leading-[30px]"
-          >
-            {profile.aboutText}
-          </motion.p>
+      <div className="mt-8">
+        <motion.p
+          variants={fadeIn("", "", 0.1, 1)}
+          className="text-secondary max-w-3xl text-[17px] leading-[30px]"
+        >
+          {profile.aboutText}
+        </motion.p>
 
-          <div className="mt-16 flex flex-wrap gap-10 max-sm:justify-center">
-            {services.map((service, index) => (
-              <ServiceCard key={service.title} index={index} {...service} />
-            ))}
-          </div>
+        <div className="mt-16 flex flex-wrap gap-10 max-sm:justify-center">
+          {services.map((service, index) => (
+            <ServiceCard key={service.title} index={index} {...service} />
+          ))}
         </div>
-
-        {profile.photoUrl && <Portrait src={profile.photoUrl} />}
       </div>
     </>
   );

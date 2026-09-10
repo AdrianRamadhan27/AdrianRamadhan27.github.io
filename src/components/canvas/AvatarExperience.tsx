@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import AvatarCanvas, { type AvatarController } from "./Avatar";
+import FlipAvatar from "./FlipAvatar";
 import SpeechBubble from "../chat/SpeechBubble";
 import ChatInputBar from "../chat/ChatInputBar";
 import { ChatBubbleIcon, ChevronDownIcon } from "../chat/dockIcons";
@@ -39,7 +40,7 @@ const MOBILE_BREAKPOINT_PX = 640;
 // node; the GLB is drei-cached so this is a quick re-parse, not a refetch,
 // and only the avatar's pose/animation state, not the conversation, resets).
 const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
-  const { chatPublic } = useContent();
+  const { chatPublic, profile } = useContent();
   const isMobile = useIsMobile(MOBILE_BREAKPOINT_PX);
   const avatarRef = useRef<AvatarController>(null);
   const playerRef = useRef<AudioStreamPlayer | null>(null);
@@ -201,8 +202,12 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
     if (isMobile) {
       return (
         <div className="mt-8 flex flex-col items-center gap-4 px-6">
-          <div className="h-[42vh] max-h-[360px] w-full max-w-md overflow-hidden rounded-2xl">
-            <AvatarCanvas avatarUrl={chatPublic.avatarUrl} className="h-full w-full" />
+          <div className="mx-auto aspect-[2/3] w-full max-w-[260px] rounded-2xl">
+            <FlipAvatar
+              avatarUrl={chatPublic.avatarUrl}
+              photoUrl={profile.photoUrl}
+              className="h-full w-full"
+            />
           </div>
           {disabledNotice}
         </div>
@@ -210,7 +215,11 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
     }
     return (
       <div className="relative h-full w-full">
-        <AvatarCanvas avatarUrl={chatPublic.avatarUrl} className="h-full w-full" />
+        <FlipAvatar
+          avatarUrl={chatPublic.avatarUrl}
+          photoUrl={profile.photoUrl}
+          className="absolute bottom-[15%] right-[9%] z-0 aspect-[2/3] h-[58%] w-auto sm:h-[64%] lg:h-[58%]"
+        />
         <div className="absolute inset-x-0 bottom-8 flex justify-center px-4">
           {disabledNotice}
         </div>
@@ -313,8 +322,13 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
         onPointerDownCapture={unlockAudio}
         onKeyDownCapture={unlockAudio}
       >
-        <div className="animate-pop h-[46vh] max-h-[390px] w-full max-w-md overflow-hidden rounded-2xl">
-          <AvatarCanvas ref={avatarRef} avatarUrl={chatPublic.avatarUrl} className="h-full w-full" />
+        <div className="animate-pop mx-auto aspect-[2/3] w-full max-w-[260px] rounded-2xl">
+          <FlipAvatar
+            ref={avatarRef}
+            avatarUrl={chatPublic.avatarUrl}
+            photoUrl={profile.photoUrl}
+            className="h-full w-full"
+          />
         </div>
         <div className="max-h-[30vh] w-full max-w-md overflow-y-auto">{wideBubble}</div>
         <div className="w-full max-w-md">{chatInput}</div>
@@ -340,10 +354,16 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
           there's transparent canvas space beneath the feet) clear of the
           bubble/input strip entirely, rather than trusting z-index alone
           against a transparent-but-still-hit-testable canvas underneath. */}
-      <AvatarCanvas
+      {/* Portrait aspect box (w derived from h via aspect-[2/3]) so the
+          photo and the avatar share one upright frame -- the avatar reads
+          as a standing figure and the photo isn't cropped landscape.
+          right-[9%], not right-0: pulled in off the hero's edge so it
+          sits within the right-side space rather than hugging it. */}
+      <FlipAvatar
         ref={avatarRef}
         avatarUrl={chatPublic.avatarUrl}
-        className="animate-pop absolute bottom-[28%] right-0 z-0 h-[58%] w-[74%] sm:h-[66%] sm:w-[45%] lg:h-[50%] lg:w-[39%] lg:bottom-[16%]"
+        photoUrl={profile.photoUrl}
+        className="animate-pop absolute bottom-[15%] right-[9%] z-0 aspect-[2/3] h-[58%] w-auto sm:h-[64%] lg:h-[58%]"
       />
 
       {/* Bubble sits directly above the input bar, both anchored to the

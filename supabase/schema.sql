@@ -158,7 +158,14 @@ insert into chat_settings (id) values (1) on conflict (id) do nothing;
 -- and its voice (TTS/STT) configuration. Additive + idempotent so this is
 -- safe to re-run against an already-deployed database -- see the
 -- profile.chat_context precedent above for the same pattern.
-alter table chat_settings add column if not exists hero_variant text not null default 'computer';
+alter table chat_settings add column if not exists hero_variant text not null default 'avatar';
+-- Separate from the ADD COLUMN above: on a database where the column
+-- already exists (added by an earlier run of this file, when the default
+-- was still 'computer'), ADD COLUMN IF NOT EXISTS is a no-op and would
+-- leave the old default in place -- this line moves it either way. The
+-- singleton row itself is set through the CMS, so this only matters for
+-- how a hypothetical re-insert would behave.
+alter table chat_settings alter column hero_variant set default 'avatar';
 alter table chat_settings add column if not exists avatar_path text;
 alter table chat_settings add column if not exists voice_enabled boolean not null default false;
 alter table chat_settings add column if not exists voice_base_url text not null default 'https://openrouter.ai/api/v1';
