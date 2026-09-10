@@ -9,7 +9,12 @@ import { ChatBubbleIcon } from "../chat/dockIcons";
 import { useChatSession } from "../../hooks/useChatSession";
 import { useContent } from "../../hooks/useContent";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { isBrowserTTSAvailable, speakWithBrowserTTS, streamSpeech } from "../../lib/voiceClient";
+import {
+  isBrowserTTSAvailable,
+  primeBrowserTTS,
+  speakWithBrowserTTS,
+  streamSpeech,
+} from "../../lib/voiceClient";
 import { AudioStreamPlayer } from "../../lib/audioStreamPlayer";
 import type { GestureName } from "../../lib/gestureTags";
 
@@ -131,6 +136,11 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
     if (!audioUnlockedRef.current) {
       audioUnlockedRef.current = true;
       void playerRef.current?.ensureReady();
+      // Prime browser SpeechSynthesis NOW, inside this real gesture -- the
+      // fallback path (speakWithBrowserTTS) fires seconds later after the
+      // chat round-trip, well outside any activation window Safari/Chrome
+      // require for the first speak() call.
+      primeBrowserTTS();
     }
     // First interaction -> voice defaults ON, unless the visitor already
     // muted it themselves. Deliberately NOT gated on chatPublic.voiceEnabled
@@ -168,8 +178,19 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
   };
 
   const speak = async (text: string) => {
-    if (!chatPublic.voiceEnabled || !voiceOnRef.current || !text.trim()) return;
+    if (!chatPublic.voiceEnabled || !voiceOnRef.current || !text.trim()) {
+      console.info(
+        `[voice] speak() skipped -- voiceEnabled=${chatPublic.voiceEnabled} voiceOn=${voiceOnRef.current} hasText=${!!text.trim()}`
+      );
+      return;
+    }
     const player = playerRef.current;
+    // Cut off a still-playing previous utterance before starting this one
+    // -- but only if something is actually mid-speech (calling cancel()
+    // right before speak() with nothing playing can wedge Chrome).
+    if (typeof window !== "undefined" && window.speechSynthesis?.speaking) {
+      window.speechSynthesis.cancel();
+    }
     avatarRef.current?.setSpeaking(true);
     try {
       if (player) {
@@ -187,13 +208,17 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
         return;
       }
       throw new Error("No audio player available.");
-    } catch {
+    } catch (primaryErr) {
       // Fall back to browser TTS -- can't be lip-synced (its audio output
       // never reaches the Web Audio graph, verified while planning this),
       // so approximate the mouth flap from word-boundary events instead of
       // leaving it frozen while still audibly speaking. usingFallbackRef
       // tells the rAF loop above to read fallbackMouthRef instead of the
       // (silent, during this path) real audio player.
+      console.info(
+        "[voice] primary TTS (speak function) failed, using browser fallback --",
+        primaryErr instanceof Error ? primaryErr.message : primaryErr
+      );
       if (isBrowserTTSAvailable()) {
         usingFallbackRef.current = true;
         try {
@@ -206,6 +231,8 @@ const AvatarExperience = ({ docked = false }: { docked?: boolean }) => {
           usingFallbackRef.current = false;
           fallbackMouthRef.current = 0;
         }
+      } else {
+        console.warn("[voice] browser speechSynthesis not available either");
       }
     } finally {
       avatarRef.current?.setSpeaking(false);

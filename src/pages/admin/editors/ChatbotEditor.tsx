@@ -44,7 +44,13 @@ const EMPTY: SettingsRow = {
   tts_voice: "",
 };
 
-type CatalogModel = { model_id: string; display_name: string };
+type CatalogModel = {
+  model_id: string;
+  display_name: string;
+  // TTS models only -- the provider's list of voice names for this model
+  // (OpenRouter's `supported_voices`). Drives the Voice name dropdown.
+  voices?: string[];
+};
 type ModelKind = "chat" | "tts";
 
 const MODEL_CACHE_KEY = "cms_model_catalog_cache_v1";
@@ -219,7 +225,11 @@ const ChatbotEditor = () => {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        setStatus(`Error: ${json.error ?? "Voice test failed."}`);
+        const detail =
+          json.detail && !String(json.error ?? "").includes(json.detail)
+            ? ` (${String(json.detail).slice(0, 200)})`
+            : "";
+        setStatus(`Error: ${json.error ?? "Voice test failed."}${detail}`);
       } else {
         // Real MP3 (see supabase/functions/speak) -- a plain <audio>
         // element can play it directly, no container wrapping needed.
@@ -238,6 +248,11 @@ const ChatbotEditor = () => {
   };
 
   if (loading || !settings) return <p className="text-secondary">Loading…</p>;
+
+  // Voice names the currently-selected TTS model advertises (see the
+  // `models` function) -- non-empty turns the Voice field into a dropdown.
+  const ttsVoiceOptions =
+    ttsModels.find((m) => m.model_id === settings.tts_model)?.voices ?? [];
 
   return (
     <div>
@@ -505,13 +520,40 @@ const ChatbotEditor = () => {
       </div>
 
       <div className={fieldClass}>
-        <label className={labelClass}>Voice name (provider-specific, optional)</label>
-        <input
-          className={inputClass}
-          placeholder="e.g. flux-drew-en"
-          value={settings.tts_voice}
-          onChange={(e) => setSettings({ ...settings, tts_voice: e.target.value })}
-        />
+        <label className={labelClass}>Voice name (provider-specific)</label>
+        {ttsVoiceOptions.length > 0 ? (
+          <select
+            className={inputClass}
+            value={settings.tts_voice}
+            onChange={(e) => setSettings({ ...settings, tts_voice: e.target.value })}
+          >
+            <option value="">Provider default</option>
+            {/* the saved value may not be in the current model's list (the
+                model was just switched) -- keep it selectable regardless */}
+            {settings.tts_voice && !ttsVoiceOptions.includes(settings.tts_voice) && (
+              <option value={settings.tts_voice}>
+                {settings.tts_voice} (not in this model&apos;s list)
+              </option>
+            )}
+            {ttsVoiceOptions.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className={inputClass}
+            placeholder="e.g. onyx"
+            value={settings.tts_voice}
+            onChange={(e) => setSettings({ ...settings, tts_voice: e.target.value })}
+          />
+        )}
+        <p className="text-secondary mt-1 text-[12px]">
+          {ttsVoiceOptions.length > 0
+            ? `${ttsVoiceOptions.length} voices available for this model (from the provider). Pick one, then Test voice.`
+            : "Most models require this. OpenAI-family (tts-1, gpt-4o-mini-tts): alloy, echo, fable, onyx (male), nova, shimmer. Hit “Refresh models” above to get a dropdown of the exact names for your model."}
+        </p>
       </div>
 
       <div className={fieldClass}>

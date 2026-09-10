@@ -5,15 +5,16 @@
 //
 // ?kind=chat (default) | tts selects which catalog to refresh. chat uses
 // chat_settings.base_url/model against the plain /models endpoint. tts
-// uses chat_settings.voice_base_url and filters by architecture modality --
-// except OpenRouter's public /models catalog does NOT list its dedicated
-// audio-out models (verified empirically while building this: 0 of 428
-// chat models matched known TTS ids, and the modality filter returns only
-// OTHER chat models that happen to emit audio, not the dedicated speech
-// models). So known model ids are seeded in below and merged with whatever
-// the API does return, keeping the dropdown useful regardless of what that
-// endpoint covers on any given day. The CMS's "Test voice" button is the
-// actual source of truth for whether a given model id really works.
+// uses chat_settings.voice_base_url and OpenRouter's dedicated filter
+// `GET /models?output_modalities=speech` -- that DOES list the real TTS
+// models (deepgram, fish-audio, kokoro, gemini-tts, voxtral, ...) and,
+// crucially, each entry carries a `supported_voices` string array, which
+// is what the CMS turns into the "Voice name" dropdown. The plain
+// unfiltered /models catalog does NOT include these (and the older
+// output_modalities=audio filter returns only music/omni chat models), so
+// the speech filter is essential. A small seed list is still merged in as
+// a floor in case the endpoint changes shape; "Test voice" in the CMS
+// remains the source of truth for whether an id actually works.
 //
 // No "stt" kind -- speech-to-text/microphone input was removed; voice here
 // is TTS-only.
@@ -26,16 +27,16 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 type Kind = "chat" | "tts";
 
-// Best-effort seed, not guaranteed current -- OpenRouter's audio model
-// lineup isn't enumerable through /models as of this writing. "Test voice"
-// in the CMS is what actually confirms a given id still works.
+// Floor list, merged in only for ids the live speech-filtered /models call
+// didn't return (it normally returns all of these and more, WITH voices).
+// "Test voice" in the CMS is what actually confirms an id still works.
 const TTS_SEED_MODELS = [
   "deepgram/flux-tts:free",
   "fish-audio/s2.1-pro-free:free",
   "hexgrad/kokoro-82m",
   "google/gemini-3.1-flash-tts-preview",
+  "minimax/speech-2.8-hd",
   "openai/gpt-4o-mini-tts",
-  "openai/gpt-audio-mini",
 ];
 
 Deno.serve(async (req) => {
@@ -76,9 +77,23 @@ Deno.serve(async (req) => {
     );
   }
 
-  const upstream = await fetch(`${baseUrl.replace(/\/$/, "")}/models`, {
+  const modelsUrl =
+    kind === "tts"
+      ? `${baseUrl.replace(/\/$/, "")}/models?output_modalities=speech`
+      : `${baseUrl.replace(/\/$/, "")}/models`;
+
+  let upstream = await fetch(modelsUrl, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
+  let usedSpeechFilter = kind === "tts" && upstream.ok;
+  // Non-OpenRouter providers may not understand the query param -- retry
+  // plain and filter client-side below.
+  if (!upstream.ok && kind === "tts") {
+    upstream = await fetch(`${baseUrl.replace(/\/$/, "")}/models`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    usedSpeechFilter = false;
+  }
 
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => "");
@@ -89,32 +104,72 @@ Deno.serve(async (req) => {
   }
 
   const json = await upstream.json();
-  type RawModel = { id: string; architecture?: { output_modalities?: string[] } };
+  type RawModel = {
+    id: string;
+    name?: string;
+    architecture?: { output_modalities?: string[] };
+    supported_voices?: unknown;
+  };
   const rawModels: RawModel[] = json.data ?? json.models ?? [];
 
-  let ids: string[];
+  type CatalogEntry = { model_id: string; display_name: string; kind: Kind; voices: string[] };
+  let models: CatalogEntry[];
+
   if (kind === "chat") {
-    ids = rawModels.map((m) => m.id);
+    models = rawModels.map((m) => ({
+      model_id: m.id,
+      display_name: m.id,
+      kind,
+      voices: [],
+    }));
   } else {
-    ids = rawModels
-      .filter((m) => m.architecture?.output_modalities?.includes("audio"))
-      .map((m) => m.id);
-    // Merge the curated seed in -- see the file-level comment on why the
-    // API alone under-reports audio models. Seed models first since
-    // they're the ones actually worth surfacing.
-    const seen = new Set(TTS_SEED_MODELS);
-    ids = [...TTS_SEED_MODELS, ...ids.filter((id) => !seen.has(id))];
+    // If we hit the filtered endpoint, trust its list; otherwise keep only
+    // models that declare a speech/audio output modality.
+    const speechModels = usedSpeechFilter
+      ? rawModels
+      : rawModels.filter((m) =>
+          m.architecture?.output_modalities?.some((x) => x === "speech" || x === "audio")
+        );
+    const fromApi: CatalogEntry[] = speechModels.map((m) => ({
+      model_id: m.id,
+      display_name: m.name || m.id,
+      kind,
+      voices: Array.isArray(m.supported_voices)
+        ? (m.supported_voices as unknown[]).filter((v): v is string => typeof v === "string")
+        : [],
+    }));
+    const seen = new Set(fromApi.map((m) => m.model_id));
+    models = [
+      ...fromApi,
+      ...TTS_SEED_MODELS.filter((id) => !seen.has(id)).map((id) => ({
+        model_id: id,
+        display_name: id,
+        kind,
+        voices: [] as string[],
+      })),
+    ];
   }
 
-  const models = ids
-    .map((id) => ({ model_id: id, display_name: id, kind }))
-    .sort((a, b) => a.model_id.localeCompare(b.model_id));
+  models.sort((a, b) => a.model_id.localeCompare(b.model_id));
 
   if (models.length > 0) {
     await supabase.from("model_catalog").delete().eq("kind", kind);
-    await supabase.from("model_catalog").insert(
-      models.map((m) => ({ ...m, fetched_at: new Date().toISOString() }))
-    );
+    const rows = models.map((m) => ({ ...m, fetched_at: new Date().toISOString() }));
+    const { error: insertErr } = await supabase.from("model_catalog").insert(rows);
+    // `voices` is a newer column -- if the migration hasn't been run the
+    // insert 400s on the unknown column; retry without it so the catalog
+    // still caches (the CMS dropdown reads voices from THIS response, not
+    // the table, so it works either way).
+    if (insertErr) {
+      await supabase.from("model_catalog").insert(
+        rows.map((r) => ({
+          model_id: r.model_id,
+          display_name: r.display_name,
+          kind: r.kind,
+          fetched_at: r.fetched_at,
+        }))
+      );
+    }
   }
 
   return new Response(JSON.stringify({ models }), {

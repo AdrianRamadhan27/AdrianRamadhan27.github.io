@@ -279,6 +279,11 @@ create table if not exists model_catalog (
   primary key (model_id, kind)
 );
 alter table model_catalog add column if not exists kind text not null default 'chat';
+-- Per-model voice list for TTS models -- OpenRouter returns it as
+-- `supported_voices` on GET /models?output_modalities=speech, and the CMS
+-- turns it into the "Voice name" dropdown. Empty for chat models and for
+-- any TTS model the provider doesn't advertise voices for.
+alter table model_catalog add column if not exists voices jsonb not null default '[]'::jsonb;
 alter table model_catalog drop constraint if exists model_catalog_pkey;
 alter table model_catalog add constraint model_catalog_pkey primary key (model_id, kind);
 

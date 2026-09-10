@@ -56,69 +56,97 @@ export async function streamSpeech(
   }
 }
 
-// The avatar reads as a man, so the fallback voice should too. Browsers
-// expose no gender field, so this goes by name: a priority list of the
-// natural-sounding male voices bundled with macOS / Windows / Chrome /
-// Android first, then any voice whose name otherwise looks male, English
-// throughout. getVoices() is often empty on the first call (the list
-// loads async) -- the voiceschanged listener below re-runs the pick, and
-// until it resolves speakWithBrowserTTS just lets the browser use its
-// own default for that one utterance.
+// The avatar reads as a man, so the fallback voice should too -- best
+// effort, since browser SpeechSynthesis voice control is genuinely
+// unreliable in Chromium:
+//   * Chrome's "Google UK/US English" voices are NETWORK voices that
+//     frequently just never speak (no audio, no error, no events) --
+//     reported live: Chrome picked "Google UK English Male" and went
+//     silent while Arc, which lacks it, picked the local "Daniel" and
+//     spoke. So network voices are excluded outright here.
+//   * Even a valid LOCAL voice assigned to utterance.voice is sometimes
+//     ignored and the OS default is used instead -- reported live: Arc
+//     logged it was using "Daniel" but spoke in the female default.
+//     speakWithBrowserTTS also sets utterance.lang to the voice's lang,
+//     which makes the assignment stick more often.
+// If no reliable male voice is found we return null and let the OS
+// default speak -- a working female voice beats a silent male one. The
+// bulletproof way to get a male fallback voice is to set the OS/system
+// voice to a male one (macOS: System Settings > Accessibility > Spoken
+// Content > System Voice).
 const PREFERRED_MALE_VOICES = [
-  "Google UK English Male",
-  "Google US English Male",
-  "Alex", // macOS, the good natural one
+  // macOS -- default-installed, local
+  "Alex",
   "Daniel",
-  "Rishi",
+  "Fred",
   "Aaron",
   "Arthur",
   "Reed",
+  "Rishi",
   "Tom",
   "Oliver",
   "Gordon",
-  "David", // Windows
+  // Windows / Edge -- local
+  "Microsoft David",
+  "Microsoft Mark",
+  "Microsoft Guy",
+  "Microsoft Christopher",
+  "David",
   "Mark",
   "Guy",
-  "Christopher",
-  "Eric",
-  "Ryan",
   "James",
+  "Ryan",
 ];
-// macOS ships ~30 joke/robot voices (Albert, Bad News, Bubbles, Zarvox…)
-// -- some read as "male" but sound absurd; never pick these.
+// macOS ships ~30 joke/robot voices -- some read as "male" but sound
+// absurd; never pick these.
 const NOVELTY_VOICE =
-  /\b(albert|bad news|good news|bahh|bells|boing|bubbles|cellos|wobble|jester|organ|superstar|trinoids|whisper|zarvox|deranged|hysterical|pipe organ|flo|grandma|grandpa|rocko|shelley|sandy)\b/i;
+  /\b(albert|bad news|good news|bahh|bells|boing|bubbles|cellos|wobble|jester|organ|superstar|trinoids|whisper|zarvox|deranged|hysterical|pipe organ|flo|grandma|grandpa|rocko|shelley|sandy|junior|ralph)\b/i;
 const MALE_VOICE_NAME =
-  /\b(male|daniel|alex|fred|arthur|oliver|rishi|george|gordon|james|thomas|david|mark|guy|ryan|aaron|reed)\b/i;
+  /\b(male|daniel|alex|fred|arthur|oliver|rishi|george|gordon|james|thomas|david|mark|guy|ryan|aaron|reed|eric|christopher)\b/i;
 
-let cachedBrowserVoice: SpeechSynthesisVoice | null | undefined;
-
+// Re-read the list every call -- never cache a SpeechSynthesisVoice
+// object, Chrome rebuilds that array and a stale object makes speak()
+// silently do nothing. LOCAL voices only (see the block comment above on
+// why network voices are excluded).
 function pickBrowserVoice(): SpeechSynthesisVoice | null {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
-  if (cachedBrowserVoice !== undefined) return cachedBrowserVoice;
 
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length === 0) return null; // not loaded yet
+  const local = window.speechSynthesis
+    .getVoices()
+    .filter((v) => v.localService && !NOVELTY_VOICE.test(v.name));
+  if (local.length === 0) return null;
 
-  const usable = voices.filter((v) => !NOVELTY_VOICE.test(v.name));
-  const english = usable.filter((v) => /^en[-_]?/i.test(v.lang));
-  const pool = english.length > 0 ? english : usable;
+  const english = local.filter((v) => /^en[-_]?/i.test(v.lang));
+  const pool = english.length > 0 ? english : local;
 
   for (const name of PREFERRED_MALE_VOICES) {
     const hit = pool.find((v) => v.name.toLowerCase().includes(name.toLowerCase()));
-    if (hit) return (cachedBrowserVoice = hit);
+    if (hit) return hit;
   }
-  // null -> keep the browser default rather than force an odd/female one.
-  return (cachedBrowserVoice = pool.find((v) => MALE_VOICE_NAME.test(v.name)) ?? null);
+  return pool.find((v) => MALE_VOICE_NAME.test(v.name)) ?? null;
 }
 
 if (typeof window !== "undefined" && "speechSynthesis" in window) {
-  window.speechSynthesis.addEventListener("voiceschanged", () => {
-    cachedBrowserVoice = undefined;
-    pickBrowserVoice();
-  });
   // Kick the list into loading (Chrome populates it lazily on first read).
-  pickBrowserVoice();
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener("voiceschanged", () => {
+    window.speechSynthesis.getVoices();
+  });
+}
+
+// Call this synchronously from a real user-gesture handler. Warms the
+// voice list and lifts any earlier pause -- Safari in particular won't
+// speak later if synthesis was never touched during a gesture. No
+// utterance is spoken (a 0-volume placeholder was tried and only added a
+// queued item that raced the real reply).
+export function primeBrowserTTS(): void {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.resume();
+    window.speechSynthesis.getVoices();
+  } catch {
+    /* best effort */
+  }
 }
 
 // Last-resort TTS when the `speak` edge function is unavailable (voice
@@ -126,19 +154,122 @@ if (typeof window !== "undefined" && "speechSynthesis" in window) {
 // lip-synced -- SpeechSynthesis output never reaches the Web Audio graph
 // (verified during planning) -- so callers should drive an approximate
 // mouth flap from `onBoundary` instead of real amplitude.
+//
+// Logs each step under "[voice]" so a "no sound" report can be diagnosed
+// from the console: how many voices exist, which one was chosen, whether
+// it actually started, and any error code.
 export function speakWithBrowserTTS(text: string, onBoundary?: () => void): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       reject(new Error("Browser speech synthesis is unavailable."));
       return;
     }
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voice = pickBrowserVoice();
-    if (voice) utterance.voice = voice;
-    utterance.onboundary = () => onBoundary?.();
-    utterance.onend = () => resolve();
-    utterance.onerror = (e) => reject(new Error(e.error || "Speech synthesis failed."));
-    window.speechSynthesis.speak(utterance);
+    const synth = window.speechSynthesis;
+    // cancel() + resume() before speaking: Chrome's speech engine wedges
+    // (speaking === true, utterances queue, nothing plays, no events) and
+    // a cancel is the documented way to clear it. `interrupted`/`canceled`
+    // errors are treated as clean below, so this is safe even mid-reply.
+    synth.cancel();
+    synth.resume();
+
+    const voiceList = synth.getVoices();
+    console.info(
+      `[voice] browser fallback starting -- ${voiceList.length} voice(s)` +
+        (voiceList.length === 0
+          ? " -- speechSynthesis has NO voices on this device, it cannot speak"
+          : ` (OS default: ${voiceList.find((v) => v.default)?.name ?? "unknown"})`)
+    );
+
+    let settled = false;
+    let attempt = -1; // 0 = preferred male voice, 1 = OS default (no voice)
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
+    let keepAlive: ReturnType<typeof setInterval> | undefined;
+
+    const done = (err?: Error) => {
+      if (settled) return;
+      settled = true;
+      if (watchdog) clearTimeout(watchdog);
+      if (keepAlive) clearInterval(keepAlive);
+      if (err) {
+        console.warn("[voice] browser fallback failed:", err.message);
+        reject(err);
+      } else {
+        console.info("[voice] browser fallback done");
+        resolve();
+      }
+    };
+
+    const tryAttempt = (n: number) => {
+      if (settled) return;
+      attempt = n;
+      if (watchdog) clearTimeout(watchdog);
+
+      const u = new SpeechSynthesisUtterance(text);
+      if (n === 0) {
+        const v = pickBrowserVoice();
+        if (v) {
+          u.voice = v;
+          u.lang = v.lang; // Chromium honours utterance.voice more reliably with a matching lang
+          console.info(
+            `[voice] attempt 0: "${v.name}" (${v.lang}, ${v.localService ? "local" : "network"})`
+          );
+        } else {
+          console.info("[voice] attempt 0: no male voice found -- using OS default");
+        }
+      } else {
+        console.info("[voice] attempt 1: OS default voice (no override)");
+      }
+
+      let onstartFired = false;
+      u.onstart = () => {
+        if (settled || attempt !== n) return;
+        onstartFired = true;
+        if (watchdog) clearTimeout(watchdog);
+        console.info("[voice] speaking");
+        // Chrome silently pauses utterances after ~15s -- keep nudging.
+        keepAlive = setInterval(() => synth.resume(), 8000);
+      };
+      u.onboundary = () => onBoundary?.();
+      u.onend = () => {
+        if (attempt === n) done();
+      };
+      u.onerror = (e) => {
+        if (settled || attempt !== n) return;
+        if (e.error === "interrupted" || e.error === "canceled") {
+          done(); // a newer reply / a mute stopped us -- clean end
+          return;
+        }
+        if (n === 0) {
+          if (keepAlive) clearInterval(keepAlive);
+          tryAttempt(1);
+        } else {
+          done(new Error(e.error || "speech synthesis error"));
+        }
+      };
+
+      synth.speak(u);
+
+      // Watchdog keyed on onstart, NOT synth.speaking -- when Chrome is
+      // wedged, synth.speaking reads true while nothing plays and no
+      // onstart ever fires. If onstart hasn't fired shortly, move on.
+      watchdog = setTimeout(() => {
+        if (settled || attempt !== n || onstartFired) return;
+        console.warn(
+          `[voice] attempt ${n} never started (speaking=${synth.speaking} pending=${synth.pending}) -- ` +
+            (n === 0 ? "falling back to OS default" : "giving up")
+        );
+        if (keepAlive) clearInterval(keepAlive);
+        synth.cancel();
+        synth.cancel(); // double cancel: known unwedge trick
+        if (n === 0) {
+          setTimeout(() => tryAttempt(1), 50);
+        } else {
+          done(new Error("speechSynthesis produced no audio -- browser TTS is not working on this device"));
+        }
+      }, n === 0 ? 1200 : 2000);
+    };
+
+    tryAttempt(0);
   });
 }
 

@@ -44,7 +44,7 @@ const LinkedInCard = ({ className = "" }: { className?: string }) => {
       href={`https://www.linkedin.com/in/${vanity}`}
       target="_blank"
       rel="noreferrer"
-      // LinkedIn's own brand blue (#0A66C2, their actual logo/button
+      // LinkedIn's own brand blue (#0077B5, their actual logo/button
       // color) tinted into a dark card, not this site's usual
       // bg-tertiary/border-accent green -- mirrors GithubCard now using
       // GitHub's own dark palette instead of that same green, so each
@@ -60,17 +60,17 @@ const LinkedInCard = ({ className = "" }: { className?: string }) => {
       // back to this element's own content height and quietly opts it
       // OUT of being stretched to match GithubCard -- confirmed directly
       // (109.5px vs GithubCard's 209.4px) before removing it.
-      className={`pointer-events-auto flex flex-col rounded-2xl border border-[#0a66c2]/40 bg-[#0a2540] p-4 transition-transform hover:scale-[1.02] hover:border-[#0a66c2]/70 ${className}`}
+      className={`pointer-events-auto flex flex-col rounded-2xl border border-[#0077b5]/40 bg-[#062a3d] p-4 transition-transform hover:scale-[1.02] hover:border-[#0077b5]/70 ${className}`}
     >
       <div className="flex items-center gap-3">
         {photoUrl ? (
           <img
             src={photoUrl}
             alt={displayName}
-            className="h-10 w-10 flex-shrink-0 rounded-full border border-[#0a66c2]/50 object-cover"
+            className="h-10 w-10 flex-shrink-0 rounded-full border border-[#0077b5]/50 object-cover"
           />
         ) : (
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[#0a66c2]/50 bg-[#0a66c2]/20 text-[#70b5f9]">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[#0077b5]/50 bg-[#0077b5]/20 text-[#4fb5dd]">
             <FaLinkedin className="h-5 w-5" />
           </div>
         )}
@@ -79,12 +79,12 @@ const LinkedInCard = ({ className = "" }: { className?: string }) => {
             {displayName}
           </p>
           {subtitle && (
-            <p className="truncate text-[11px] text-[#8fb8e0]">{subtitle}</p>
+            <p className="truncate text-[11px] text-[#8fc0d5]">{subtitle}</p>
           )}
         </div>
       </div>
 
-      <div className="mt-auto flex items-center gap-2 pt-4 text-[13px] font-semibold text-[#70b5f9]">
+      <div className="mt-auto flex items-center gap-2 pt-4 text-[13px] font-semibold text-[#4fb5dd]">
         <FaLinkedin className="h-4 w-4" />
         Connect on LinkedIn
       </div>

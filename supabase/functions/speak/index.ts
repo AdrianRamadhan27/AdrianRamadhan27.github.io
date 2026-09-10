@@ -101,9 +101,9 @@ Deno.serve(async (req) => {
     });
   }
 
-  const upstream = await fetch(
-    `${settings.voice_base_url.replace(/\/$/, "")}/audio/speech`,
-    {
+  const speechUrl = `${settings.voice_base_url.replace(/\/$/, "")}/audio/speech`;
+  const callTTS = (voice: string | undefined) =>
+    fetch(speechUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -112,16 +112,41 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: settings.tts_model,
         input: text,
-        voice: settings.tts_voice || undefined,
+        voice: voice || undefined,
         response_format: "mp3",
       }),
+    });
+
+  let upstream = await callTTS(settings.tts_voice);
+  let firstErrText = "";
+
+  // Many TTS models (all the OpenAI-family ones) 400 when no voice is
+  // given. If the CMS left the voice blank, retry once with a safe default
+  // so it works out of the box instead of just erroring.
+  if (!upstream.ok && !settings.tts_voice) {
+    firstErrText = await upstream.text().catch(() => "");
+    if (/voice/i.test(firstErrText) && /(required|must|missing|invalid)/i.test(firstErrText)) {
+      upstream = await callTTS("alloy");
     }
-  );
+  }
 
   if (!upstream.ok || !upstream.body) {
-    const detail = await upstream.text().catch(() => "");
+    const raw = firstErrText || (await upstream.text().catch(() => ""));
+    let providerMsg = raw.slice(0, 300);
+    try {
+      const parsed = JSON.parse(raw);
+      providerMsg = parsed?.error?.message ?? parsed?.message ?? providerMsg;
+    } catch {
+      /* keep raw */
+    }
+    const voiceProblem = /voice/i.test(providerMsg) && /(required|invalid|not found|unknown)/i.test(providerMsg);
     return new Response(
-      JSON.stringify({ error: "Upstream provider error.", detail: detail.slice(0, 500) }),
+      JSON.stringify({
+        error: voiceProblem
+          ? `The TTS model rejected the voice: "${providerMsg}". Set a valid "Voice name" in the CMS Voice section (OpenAI-style models use: alloy, echo, fable, onyx, nova, shimmer).`
+          : `TTS provider error: ${providerMsg}`,
+        detail: raw.slice(0, 500),
+      }),
       { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

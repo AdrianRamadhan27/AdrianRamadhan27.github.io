@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Tilt from "react-parallax-tilt";
-import { motion } from "framer-motion";
+import { LayoutGroup, motion } from "framer-motion";
 import { FiExternalLink } from "react-icons/fi";
 
 import { github } from "../../assets";
@@ -44,7 +44,14 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
 
   return (
     <motion.div
+      // layout: when the Sort toggle reverses the list, the cards keyed by
+      // project id keep their DOM identity and framer-motion FLIP-animates
+      // each one from its old grid slot to its new one instead of jumping.
+      // The `layout` spring here is separate from the `variants` entrance
+      // transition (which keeps its own timing from fadeIn).
+      layout
       variants={fadeIn("up", "spring", Math.min(index * 0.15, 1), 0.75)}
+      transition={{ layout: { type: "spring", stiffness: 260, damping: 30 } }}
       className="project-card-wrap relative"
       style={{ perspective: "1400px" }}
     >
@@ -178,15 +185,17 @@ const Works = () => {
         </div>
       )}
 
-      <div className="mt-12 flex flex-wrap justify-center gap-7">
-        {orderedProjects.map((project, index) => (
-          <ProjectCard
-            key={project.id ?? `project-${index}`}
-            index={index}
-            {...project}
-          />
-        ))}
-      </div>
+      <LayoutGroup>
+        <div className="mt-12 flex flex-wrap justify-center gap-7">
+          {orderedProjects.map((project, index) => (
+            <ProjectCard
+              key={project.id ?? `project-${index}`}
+              index={index}
+              {...project}
+            />
+          ))}
+        </div>
+      </LayoutGroup>
     </>
   );
 };
