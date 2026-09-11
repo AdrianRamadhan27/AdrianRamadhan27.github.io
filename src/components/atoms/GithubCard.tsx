@@ -41,6 +41,40 @@ async function fetchTotalContributions(username: string): Promise<number | undef
   }
 }
 
+// Both api.github.com AND the jogruber contributions API are keyless,
+// fetched straight from the VISITOR's own browser -- so their rate limits
+// (60 unauthenticated requests/hour/IP for GitHub; "10 requests/10s" for
+// jogruber, confirmed via its own response headers) apply per visitor,
+// not per site. A visitor who reloads/tests a lot (a developer iterating
+// on the page, most of all) can burn through 60/hour on just this card --
+// 1-2 GitHub requests per linked account per page load adds up fast.
+// GitHub's response on a rate-limited request is a real HTTP error (403,
+// !res.ok), not a hang, so without this cache the card just renders
+// nothing (profiles[username] never gets set -- see the `{profile && ...}`
+// gate below) until the visitor's hourly window resets. Caching the last
+// successful fetch per account means a later rate-limited load keeps
+// showing that instead of going blank; it only helps once this browser
+// has shown the card successfully at least once, which is exactly the
+// "worked before, empty now" pattern this exists to fix.
+const CACHE_PREFIX = "gh_profile_cache_v1:";
+
+function loadCachedProfile(username: string): GithubProfile | null {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + username);
+    return raw ? (JSON.parse(raw) as GithubProfile) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedProfile(username: string, profile: GithubProfile) {
+  try {
+    localStorage.setItem(CACHE_PREFIX + username, JSON.stringify(profile));
+  } catch {
+    /* storage unavailable/full -- the fetch itself still succeeded */
+  }
+}
+
 // How long each account stays on screen before the card rotates to the
 // next one. Only matters when more than one GitHub account is linked.
 const ROTATE_MS = 5000;
@@ -81,7 +115,17 @@ const GithubCard = ({ className = "" }: { className?: string }) => {
   const accounts = getGithubAccounts(socials);
   const usernamesKey = accounts.map((a) => a.username).join(",");
 
-  const [profiles, setProfiles] = useState<Record<string, GithubProfile>>({});
+  // Seeded from localStorage (see loadCachedProfile's comment) so a
+  // rate-limited fetch on THIS load still shows whatever this browser
+  // last saw successfully, instead of the card going blank.
+  const [profiles, setProfiles] = useState<Record<string, GithubProfile>>(() => {
+    const seed: Record<string, GithubProfile> = {};
+    for (const { username } of accounts) {
+      const cached = loadCachedProfile(username);
+      if (cached) seed[username] = cached;
+    }
+    return seed;
+  });
   const [index, setIndex] = useState(0);
   const pausedRef = useRef(false);
 
@@ -89,30 +133,65 @@ const GithubCard = ({ className = "" }: { className?: string }) => {
   useEffect(() => {
     if (accounts.length === 0) return;
     let cancelled = false;
+    // Re-hydrate here too, not just in useState's initializer -- socials
+    // (and so `accounts`) can still be loading from Supabase on mount, in
+    // which case usernamesKey (and this effect) only fires once the real
+    // list is known, after the initializer already ran with an empty one.
+    setProfiles((prev) => {
+      const next = { ...prev };
+      for (const { username } of accounts) {
+        if (!next[username]) {
+          const cached = loadCachedProfile(username);
+          if (cached) next[username] = cached;
+        }
+      }
+      return next;
+    });
     accounts.forEach(async ({ username }) => {
       try {
         const [res, contributions] = await Promise.all([
           fetch(`https://api.github.com/users/${username}`),
           fetchTotalContributions(username),
         ]);
-        if (!res.ok || cancelled) return;
+        if (cancelled) return;
+        if (!res.ok) {
+          // Distinguish a rate limit from any other failure so it's
+          // diagnosable from the console instead of just "went blank" --
+          // GitHub's own rate-limit headers say exactly when it resets.
+          const remaining = res.headers.get("x-ratelimit-remaining");
+          const resetHeader = res.headers.get("x-ratelimit-reset");
+          const reason =
+            res.status === 403 && remaining === "0"
+              ? `rate-limited (resets ${
+                  resetHeader
+                    ? new Date(Number(resetHeader) * 1000).toLocaleTimeString()
+                    : "within an hour"
+                })`
+              : `HTTP ${res.status}`;
+          console.info(
+            `[github-card] ${username}: ${reason} -- ${
+              loadCachedProfile(username) ? "showing last cached data" : "no cached data, card stays empty"
+            }`
+          );
+          return;
+        }
         const data = await res.json();
         if (cancelled) return;
-        setProfiles((prev) => ({
-          ...prev,
-          [username]: {
-            avatarUrl: data.avatar_url,
-            name: data.name || data.login,
-            login: data.login,
-            publicRepos: data.public_repos ?? 0,
-            followers: data.followers ?? 0,
-            contributions,
-          },
-        }));
+        // A transient jogruber failure shouldn't blank out a contributions
+        // number this account already had cached.
+        const profile: GithubProfile = {
+          avatarUrl: data.avatar_url,
+          name: data.name || data.login,
+          login: data.login,
+          publicRepos: data.public_repos ?? 0,
+          followers: data.followers ?? 0,
+          contributions: contributions ?? loadCachedProfile(username)?.contributions,
+        };
+        setProfiles((prev) => ({ ...prev, [username]: profile }));
+        saveCachedProfile(username, profile);
       } catch {
-        // Network hiccup or rate limit -- that account just won't render
-        // when the rotation lands on it (the card body is gated on having
-        // a profile below).
+        // Network hiccup -- keep whatever's cached/already shown.
+        console.info(`[github-card] ${username}: fetch threw -- keeping cached/existing data`);
       }
     });
     return () => {
