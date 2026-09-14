@@ -20,6 +20,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, handleOptions } from "../_shared/cors.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { sendOwnerEmail } from "../_shared/emailjs.ts";
 import {
   callUpstream,
   continueChatCompletion,
@@ -27,6 +28,9 @@ import {
   type ToolDefinition,
   type UpstreamMessage,
 } from "./toolLoop.ts";
+
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -36,10 +40,16 @@ const MAX_MESSAGE_CHARS = 4000;
 const MAX_TOKENS_CEILING = 1024;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
+// Separate, much tighter budget for the email tool specifically -- it's
+// real-world side effects (an email actually landing in the owner's
+// inbox), not just tokens, so it gets its own bucket independent of the
+// per-message chat limit above.
+const EMAIL_FORWARD_WINDOW_MS = 60 * 60_000;
+const EMAIL_FORWARD_MAX_REQUESTS = 3;
 
 type ClientMessage = { role: "user" | "assistant"; content: string };
 
-const TOOLS: ToolDefinition[] = [
+const BASE_TOOLS: ToolDefinition[] = [
   {
     type: "function",
     function: {
@@ -79,6 +89,32 @@ const TOOLS: ToolDefinition[] = [
     },
   },
 ];
+
+// Only ever appended to BASE_TOOLS when email forwarding is fully
+// configured (see emailForwardConfigured in the handler below) -- the
+// model is never even offered a tool that would just fail if called.
+const EMAIL_TOOL: ToolDefinition = {
+  type: "function",
+  function: {
+    name: "forward_question_to_owner",
+    description:
+      "Sends the visitor's question directly to the portfolio owner's email inbox. Use this ONLY for something you genuinely cannot answer from the reference information above -- not covered by the profile/experience/projects/skills, or something only the owner can personally decide (availability, rates, scheduling, an opinion not documented here, etc.). Call it at most once per question, with the visitor's question close to verbatim. After it returns ok:true, tell the visitor you've forwarded their question and the owner will follow up -- never say this unless the tool actually returned ok:true. If it returns ok:false, apologize and point them to the site's Contact section instead; do not claim you forwarded anything.",
+    parameters: {
+      type: "object",
+      properties: {
+        question: {
+          type: "string",
+          description: "The visitor's question, close to verbatim.",
+        },
+        reason: {
+          type: "string",
+          description: "One short phrase on why you couldn't answer it yourself.",
+        },
+      },
+      required: ["question"],
+    },
+  },
+};
 
 // The compact half of the system message -- profile/skills/socials stay
 // inlined (already small), experiences/projects are listed as a directory
@@ -149,13 +185,20 @@ function buildDirectoryBlock(
   return lines.join("\n").trim();
 }
 
-function executeTool(
+async function executeTool(
   name: string,
   argsJson: string,
-  experiences: Record<string, unknown>[],
-  projects: Record<string, unknown>[]
-): string {
-  let args: { index?: number } = {};
+  ctx: {
+    experiences: Record<string, unknown>[];
+    projects: Record<string, unknown>[];
+    profile: Record<string, unknown> | null;
+    settings: Record<string, unknown>;
+    secret: Record<string, unknown> | null;
+    supabase: SupabaseClient;
+    req: Request;
+  }
+): Promise<string> {
+  let args: { index?: number; question?: string; reason?: string } = {};
   try {
     args = JSON.parse(argsJson || "{}");
   } catch {
@@ -164,10 +207,10 @@ function executeTool(
   const index = typeof args.index === "number" ? args.index : NaN;
 
   if (name === "get_experience") {
-    const e = pickByIndex(experiences, index);
+    const e = pickByIndex(ctx.experiences, index);
     if (!e) {
       return JSON.stringify({
-        error: `No experience at index ${args.index}. Valid indices: 0 to ${experiences.length - 1} (or -1 to -${experiences.length}).`,
+        error: `No experience at index ${args.index}. Valid indices: 0 to ${ctx.experiences.length - 1} (or -1 to -${ctx.experiences.length}).`,
       });
     }
     return JSON.stringify({
@@ -179,10 +222,10 @@ function executeTool(
   }
 
   if (name === "get_project") {
-    const p = pickByIndex(projects, index);
+    const p = pickByIndex(ctx.projects, index);
     if (!p) {
       return JSON.stringify({
-        error: `No project at index ${args.index}. Valid indices: 0 to ${projects.length - 1} (or -1 to -${projects.length}).`,
+        error: `No project at index ${args.index}. Valid indices: 0 to ${ctx.projects.length - 1} (or -1 to -${ctx.projects.length}).`,
       });
     }
     const tags = ((p.tags as { name: string }[] | null) ?? []).map((t) => t.name);
@@ -193,6 +236,46 @@ function executeTool(
       live_link: p.live_link ?? null,
       source_code_link: p.source_code_link ?? null,
     });
+  }
+
+  if (name === "forward_question_to_owner") {
+    const question = String(args.question ?? "").slice(0, 1000).trim();
+    if (!question) {
+      return JSON.stringify({ ok: false, error: "question is required" });
+    }
+
+    // Independent, tighter budget than the per-message chat rate limit --
+    // this has a real side effect (an actual email), not just tokens.
+    const allowed = await checkRateLimit(
+      ctx.supabase,
+      ctx.req,
+      "email-forward",
+      EMAIL_FORWARD_WINDOW_MS,
+      EMAIL_FORWARD_MAX_REQUESTS
+    );
+    if (!allowed) {
+      return JSON.stringify({
+        ok: false,
+        error: "Forwarding limit reached for now. Do not tell the visitor it was forwarded -- apologize and suggest the Contact section instead.",
+      });
+    }
+
+    const toEmail = String(ctx.profile?.email ?? "").trim();
+    const toName = String(ctx.profile?.full_name ?? "the portfolio owner");
+    const reason = String(args.reason ?? "").trim();
+    const result = await sendOwnerEmail({
+      serviceId: String(ctx.settings.emailjs_service_id ?? ""),
+      templateId: String(ctx.settings.emailjs_template_id ?? ""),
+      publicKey: String(ctx.settings.emailjs_public_key ?? ""),
+      privateKey: String(ctx.secret?.emailjs_private_key ?? ""),
+      toEmail,
+      toName,
+      message:
+        `A visitor asked your portfolio's AI chatbot a question it couldn't answer:\n\n` +
+        `"${question}"\n\n` +
+        `(Why it couldn't answer: ${reason || "not covered in the information it has"})`,
+    });
+    return JSON.stringify(result);
   }
 
   return JSON.stringify({ error: `Unknown tool: ${name}` });
@@ -231,6 +314,7 @@ function describeToolCall(
     if (index === -1) return "Looking up my latest project";
     return "Looking up my projects";
   }
+  if (name === "forward_question_to_owner") return "Forwarding your question";
   return "Looking something up";
 }
 
@@ -277,7 +361,11 @@ Deno.serve(async (req) => {
     { data: socials },
   ] = await Promise.all([
     supabase.from("chat_settings").select("*").eq("id", 1).maybeSingle(),
-    supabase.from("chat_secrets").select("api_key").eq("id", 1).maybeSingle(),
+    supabase
+      .from("chat_secrets")
+      .select("api_key, emailjs_private_key")
+      .eq("id", 1)
+      .maybeSingle(),
     supabase.from("profile").select("*").eq("id", 1).maybeSingle(),
     supabase.from("experiences").select("*").order("sort_order"),
     supabase.from("projects").select("*").order("sort_order"),
@@ -347,6 +435,28 @@ Deno.serve(async (req) => {
     systemContent += `\n\n---\nYou are embodied as an animated 3D avatar. When a reply calls for a body gesture, include exactly one inline tag anywhere in your reply: [gesture:wave] to wave hello/goodbye, [gesture:jumping_jacks] if asked to do jumping jacks or exercise, [gesture:dance] if asked to dance or celebrate. Only use these three exact tag names, only when it genuinely fits, and don't mention the tag itself in your words.`;
   }
 
+  // The email tool is only ever offered to the model when it would
+  // actually work -- all four EmailJS values present and a destination
+  // address to send to -- so the model is never told about a tool that
+  // would just fail if it tried calling it.
+  const ownerEmail = String((profile as Record<string, unknown> | null)?.email ?? "").trim();
+  const ownerName = String((profile as Record<string, unknown> | null)?.full_name ?? "").trim();
+  const emailForwardConfigured =
+    !!settings.email_forward_enabled &&
+    !!String(settings.emailjs_service_id ?? "").trim() &&
+    !!String(settings.emailjs_template_id ?? "").trim() &&
+    !!String(settings.emailjs_public_key ?? "").trim() &&
+    !!String(secret.emailjs_private_key ?? "").trim() &&
+    !!ownerEmail;
+
+  if (emailForwardConfigured) {
+    systemContent += `\n\n---\nIf a visitor asks something you genuinely cannot answer from the reference information above -- not covered by the profile/experience/projects/skills, or something only ${ownerName || "the portfolio owner"} can personally decide (availability, rates, scheduling, an opinion not documented here, etc.) -- call forward_question_to_owner with their question. Once it returns ok:true, tell the visitor you've forwarded their question to ${ownerName || "the owner"} and they'll follow up -- never say this unless the tool actually returned ok:true. If it returns ok:false, apologize and point them to the site's Contact section instead; do not claim you forwarded anything.`;
+  }
+
+  const tools: ToolDefinition[] = emailForwardConfigured
+    ? [...BASE_TOOLS, EMAIL_TOOL]
+    : BASE_TOOLS;
+
   const messages: UpstreamMessage[] = [{ role: "system", content: systemContent }, ...history];
 
   const maxTokens = Math.min(settings.max_tokens ?? 400, MAX_TOKENS_CEILING);
@@ -364,7 +474,7 @@ Deno.serve(async (req) => {
     messages,
     temperature,
     max_tokens: maxTokens,
-    tools: TOOLS,
+    tools,
     tool_choice: "auto",
   });
 
@@ -386,8 +496,17 @@ Deno.serve(async (req) => {
           model: settings.model,
           temperature,
           maxTokens,
-          tools: TOOLS,
-          executeTool: (name, argsJson) => executeTool(name, argsJson, experiencesArr, projectsArr),
+          tools,
+          executeTool: (name, argsJson) =>
+            executeTool(name, argsJson, {
+              experiences: experiencesArr,
+              projects: projectsArr,
+              profile,
+              settings,
+              secret,
+              supabase,
+              req,
+            }),
           describeTool: (name, argsJson) =>
             describeToolCall(name, argsJson, experiencesArr, projectsArr),
           onContentChunk: (text) => {

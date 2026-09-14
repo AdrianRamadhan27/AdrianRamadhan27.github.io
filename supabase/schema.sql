@@ -192,6 +192,18 @@ alter table chat_settings add column if not exists stt_model text not null defau
 -- (a radio, not free text) rather than a DB check constraint, so this file
 -- stays safely re-runnable without a guarded DO block for the constraint.
 
+-- Email-forwarding tool: lets the chatbot send a visitor's unanswerable
+-- question straight to the portfolio owner's inbox, via the same EmailJS
+-- account the Contact form already uses (see src/components/sections/
+-- Contact.tsx) but called server-side from the `chat` edge function, since
+-- that's where the tool call itself happens. Non-secret bits live here;
+-- the EmailJS Private Key (required for any non-browser/server request --
+-- see chat_secrets below) does not.
+alter table chat_settings add column if not exists email_forward_enabled boolean not null default true;
+alter table chat_settings add column if not exists emailjs_service_id text not null default '';
+alter table chat_settings add column if not exists emailjs_template_id text not null default '';
+alter table chat_settings add column if not exists emailjs_public_key text not null default '';
+
 alter table chat_settings enable row level security;
 drop policy if exists "chat_settings_auth_all" on chat_settings;
 create policy "chat_settings_auth_all" on chat_settings for all to authenticated
@@ -224,6 +236,14 @@ insert into chat_secrets (id) values (1) on conflict (id) do nothing;
 -- column only needs filling in if the voice provider ever diverges from
 -- the chat provider.
 alter table chat_secrets add column if not exists voice_api_key text;
+
+-- EmailJS's REST API rejects non-browser requests (no Origin header) by
+-- default -- sending from the `chat` edge function requires BOTH this
+-- Private Key (a different value from chat_settings.emailjs_public_key,
+-- which the browser Contact form already uses) AND "Allow EmailJS API for
+-- non-browser applications" turned on at
+-- https://dashboard.emailjs.com/admin/account/security.
+alter table chat_secrets add column if not exists emailjs_private_key text;
 
 alter table chat_secrets enable row level security;
 -- No policies created: RLS enabled with zero policies = zero client access.
@@ -258,6 +278,21 @@ as $$
 $$;
 
 grant execute on function has_voice_api_key() to authenticated;
+
+-- Same pattern again, for the EmailJS private key.
+create or replace function has_emailjs_private_key()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from chat_secrets
+    where id = 1 and emailjs_private_key is not null and emailjs_private_key <> ''
+  );
+$$;
+
+grant execute on function has_emailjs_private_key() to authenticated;
 
 -- ------------------------------------------------------------- model_catalog
 -- Cached list of models from the last "Refresh models" click. No anon or

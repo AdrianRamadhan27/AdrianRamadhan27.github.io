@@ -37,7 +37,10 @@ export type ToolDefinition = {
   function: { name: string; description: string; parameters: Record<string, unknown> };
 };
 
-export type ToolExecutor = (name: string, argsJson: string) => string;
+// Async, not sync -- get_experience/get_project are pure local lookups but
+// forward_question_to_owner (index.ts) makes a real network call (EmailJS),
+// so every executor goes through the same awaited signature.
+export type ToolExecutor = (name: string, argsJson: string) => Promise<string>;
 
 const MAX_TOOL_ROUNDS = 4;
 
@@ -282,7 +285,7 @@ export async function continueChatCompletion(opts: {
       messages.push({
         role: "tool",
         tool_call_id: call.id,
-        content: opts.executeTool(call.name, call.arguments),
+        content: await opts.executeTool(call.name, call.arguments),
       });
     }
     opts.onStatus?.({ kind: "thinking", label: "Putting that together" });

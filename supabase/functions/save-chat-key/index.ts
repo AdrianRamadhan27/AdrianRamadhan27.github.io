@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const ALLOWED_FIELDS = ["api_key", "voice_api_key"] as const;
+  const ALLOWED_FIELDS = ["api_key", "voice_api_key", "emailjs_private_key"] as const;
   const field = ALLOWED_FIELDS.includes(body.field as (typeof ALLOWED_FIELDS)[number])
     ? (body.field as (typeof ALLOWED_FIELDS)[number])
     : "api_key";

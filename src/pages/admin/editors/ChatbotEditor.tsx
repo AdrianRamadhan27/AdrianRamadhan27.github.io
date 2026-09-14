@@ -26,6 +26,10 @@ type SettingsRow = {
   voice_base_url: string;
   tts_model: string;
   tts_voice: string;
+  email_forward_enabled: boolean;
+  emailjs_service_id: string;
+  emailjs_template_id: string;
+  emailjs_public_key: string;
 };
 
 const EMPTY: SettingsRow = {
@@ -42,6 +46,10 @@ const EMPTY: SettingsRow = {
   voice_base_url: "https://openrouter.ai/api/v1",
   tts_model: "",
   tts_voice: "",
+  email_forward_enabled: true,
+  emailjs_service_id: "",
+  emailjs_template_id: "",
+  emailjs_public_key: "",
 };
 
 type CatalogModel = {
@@ -71,6 +79,8 @@ const ChatbotEditor = () => {
   const [hasKey, setHasKey] = useState(false);
   const [voiceApiKeyInput, setVoiceApiKeyInput] = useState("");
   const [hasVoiceKey, setHasVoiceKey] = useState(false);
+  const [emailPrivateKeyInput, setEmailPrivateKeyInput] = useState("");
+  const [hasEmailPrivateKey, setHasEmailPrivateKey] = useState(false);
 
   const [models, setModels] = useState<CatalogModel[]>(() => loadCache(MODEL_CACHE_KEY));
   const [ttsModels, setTtsModels] = useState<CatalogModel[]>(() => loadCache(TTS_MODEL_CACHE_KEY));
@@ -79,6 +89,7 @@ const ChatbotEditor = () => {
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState<ModelKind | null>(null);
   const [testingVoice, setTestingVoice] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const testAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -86,11 +97,13 @@ const ChatbotEditor = () => {
   useEffect(() => {
     (async () => {
       if (!supabase) return;
-      const [{ data: row }, { data: keyStatus }, { data: voiceKeyStatus }] = await Promise.all([
-        supabase.from("chat_settings").select("*").eq("id", 1).maybeSingle(),
-        supabase.rpc("has_chat_api_key"),
-        supabase.rpc("has_voice_api_key"),
-      ]);
+      const [{ data: row }, { data: keyStatus }, { data: voiceKeyStatus }, { data: emailKeyStatus }] =
+        await Promise.all([
+          supabase.from("chat_settings").select("*").eq("id", 1).maybeSingle(),
+          supabase.rpc("has_chat_api_key"),
+          supabase.rpc("has_voice_api_key"),
+          supabase.rpc("has_emailjs_private_key"),
+        ]);
       // Spread over EMPTY rather than a bare cast: the voice/hero columns
       // are newer additions -- a database that hasn't had the migration
       // run yet returns rows without them, which would otherwise leave
@@ -98,11 +111,15 @@ const ChatbotEditor = () => {
       if (row) setSettings({ ...EMPTY, ...(row as SettingsRow) });
       setHasKey(!!keyStatus);
       setHasVoiceKey(!!voiceKeyStatus);
+      setHasEmailPrivateKey(!!emailKeyStatus);
       setLoading(false);
     })();
   }, []);
 
-  const saveKey = async (field: "api_key" | "voice_api_key", value: string) => {
+  const saveKey = async (
+    field: "api_key" | "voice_api_key" | "emailjs_private_key",
+    value: string
+  ) => {
     if (!supabase || !value.trim()) return true;
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
@@ -147,6 +164,13 @@ const ChatbotEditor = () => {
     if (voiceApiKeyInput.trim() && (await saveKey("voice_api_key", voiceApiKeyInput))) {
       setHasVoiceKey(true);
       setVoiceApiKeyInput("");
+    }
+    if (
+      emailPrivateKeyInput.trim() &&
+      (await saveKey("emailjs_private_key", emailPrivateKeyInput))
+    ) {
+      setHasEmailPrivateKey(true);
+      setEmailPrivateKeyInput("");
     }
 
     setSaving(false);
@@ -245,6 +269,41 @@ const ChatbotEditor = () => {
       setStatus("Error: could not reach the speak function.");
     }
     setTestingVoice(false);
+  };
+
+  // Saves current settings first (test-email reads from the database, not
+  // this draft state) then asks the test-email edge function to send one
+  // real email through the saved EmailJS config -- confirms the whole
+  // chain (Service/Template/Public/Private keys, "allow non-browser
+  // applications", and the destination address) actually works, the same
+  // way "Test voice" does for TTS.
+  const handleTestEmail = async () => {
+    if (!supabase || !settings) return;
+    setTestingEmail(true);
+    setStatus("Saving settings before testing…");
+    const saved = await handleSaveSettings();
+    if (!saved) {
+      setTestingEmail(false);
+      return;
+    }
+    setStatus("Sending a test email…");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-email`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus(`Error: ${json.error ?? "Test email failed."}`);
+      } else {
+        setStatus(`Sent to ${json.to} — check your inbox.`);
+      }
+    } catch {
+      setStatus("Error: could not reach the test-email function.");
+    }
+    setTestingEmail(false);
   };
 
   if (loading || !settings) return <p className="text-secondary">Loading…</p>;
@@ -570,6 +629,105 @@ const ChatbotEditor = () => {
           Saves your current settings, then asks the model for a short
           sample and plays it — confirms the model id actually works rather
           than guessing.
+        </p>
+      </div>
+
+      <hr className="border-black-100 my-8" />
+      <h3 className="mb-4 text-[16px] font-bold">Email forwarding</h3>
+      <p className="text-secondary mb-4 text-[13px]">
+        Lets the AI forward a question it can't answer straight to your
+        email inbox (Profile tab's Contact email), via the same EmailJS
+        account the Contact form uses. Sent server-side, which EmailJS
+        blocks by default for anything that isn't a browser request -- go
+        to{" "}
+        <a
+          href="https://dashboard.emailjs.com/admin/account/security"
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent underline"
+        >
+          Account → Security
+        </a>{" "}
+        in your EmailJS dashboard and turn on "Allow EmailJS API for
+        non-browser applications", then paste that page's Private Key
+        below (different from the Public Key the Contact form already
+        uses). Service ID / Template ID / Public Key can be the exact same
+        values already used for the Contact form.
+      </p>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>
+          Let the AI forward unanswerable questions to your email
+        </label>
+        <input
+          type="checkbox"
+          checked={settings.email_forward_enabled}
+          onChange={(e) =>
+            setSettings({ ...settings, email_forward_enabled: e.target.checked })
+          }
+          className="h-5 w-5"
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>EmailJS Service ID</label>
+        <input
+          className={inputClass}
+          placeholder="service_xxxxxxx"
+          value={settings.emailjs_service_id}
+          onChange={(e) => setSettings({ ...settings, emailjs_service_id: e.target.value })}
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>EmailJS Template ID</label>
+        <input
+          className={inputClass}
+          placeholder="template_xxxxxxx"
+          value={settings.emailjs_template_id}
+          onChange={(e) => setSettings({ ...settings, emailjs_template_id: e.target.value })}
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>EmailJS Public Key</label>
+        <input
+          className={inputClass}
+          value={settings.emailjs_public_key}
+          onChange={(e) => setSettings({ ...settings, emailjs_public_key: e.target.value })}
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <label className={labelClass}>
+          EmailJS Private Key{" "}
+          {hasEmailPrivateKey
+            ? "(currently set — leave blank to keep it)"
+            : "(not set — required, see note above)"}
+        </label>
+        <input
+          type="password"
+          className={inputClass}
+          placeholder={hasEmailPrivateKey ? "••••••••••••" : "paste from Account → Security"}
+          value={emailPrivateKeyInput}
+          onChange={(e) => setEmailPrivateKeyInput(e.target.value)}
+        />
+      </div>
+
+      <div className={fieldClass}>
+        <button
+          type="button"
+          onClick={handleTestEmail}
+          disabled={testingEmail}
+          className={secondaryButtonClass}
+        >
+          {testingEmail ? "Sending…" : "Send test email"}
+        </button>
+        <p className="text-secondary mt-1 text-[12px]">
+          Saves your current settings, then sends one real test email
+          through the exact same path the AI's tool uses -- confirms the
+          whole chain works instead of waiting for the AI to decide to use
+          it.
         </p>
       </div>
 
